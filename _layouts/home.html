@@ -1,0 +1,46 @@
+---
+layout: default
+---
+
+<div class="home">
+  {%- if page.title -%}
+  <h1 class="page-heading">{{ page.title }}</h1>
+  {%- endif -%}
+
+  {{ content }}
+  <div class="row">
+    <div class="col-sm-8 p-2">
+
+      {%- if site.posts.size > 0 -%}
+      <p class="lead">{{ page.list_title | default: "Articles" }}</p>
+      <ul class="post-list">
+        {%- for post in site.posts -%}
+        <li>
+          {%- assign date_format = site.minima.date_format | default: "%b %-d, %Y" -%}
+          <h4>
+            <a style="text-decoration: none;" href="{{ post.url | relative_url }}" target="_blank">
+              <span class="text-dark">{{post.title}}</span>
+
+          </h4>
+          <div class="row">
+            <div class="col-sm-3">
+              <img src="{{post.image}}" height='auto' alt="">
+            </div>
+            <div class="col-sm-9">
+              {{ post.excerpt }}
+            </div>
+          </div>
+        </a>
+        </li>
+        {%- endfor -%}
+      </ul>
+    </div>
+    <div class="col-sm-3 p-2 border">
+      Sponsored content
+      {%- include ad-column.html -%}
+    </div>
+  </div>
+  <p class="rss-subscribe">subscribe <a href="{{ " /feed.xml" | relative_url }}">via RSS</a></p>
+  {%- endif -%}
+
+</div>
