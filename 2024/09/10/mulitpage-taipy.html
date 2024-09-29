@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  
+  <link rel="stylesheet" href="/assets/main.css">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-rbsA2VBKQhggwzxH7pPCaAqO46MgnOM80zW1RWuH61DGLwZJEdK2Kadq2F9CUG65" crossorigin="anonymous"><link type="application/atom+xml" rel="alternate" href="http://localhost:4000/feed.xml" title="Data Visualization, Data Science and AI" /></head>
+<body class="container" style="background-color:ghostwhite;"><header><!--</header> class="site-header" role="banner" style="background-color: white">-->
+  <div class="wrapper mb-2"><a class="site-title" style="font-size: larger;" rel="author" href="https://datavizandai.github.io">Data Visualization, Data Science and AI</a>
+    <a class="site-nav" rel="author" href="/about">About</a>
+  </div>
+</header><main class="container" aria-label="Content">
+      <div >
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">How to Construct a Multipage Data Science Web App in Python with Taipy</h1>
+    <h3>Taipy supports easy navigation between pages in Python web apps - we create a simple CO2 emissions app</h3>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2024-09-10T00:00:00+02:00" itemprop="datePublished">Sep 10, 2024
+      </time></p>
+  </header>
+
+  <div class="row">
+    <div class="col-sm-9">
+      <div class="post-content e-content" itemprop="articleBody">
+        <p><img src="https://github.com/alanjones2/taipyapps/blob/main/multipage/images/ria-CvTaPeo3NRk-unsplash.jpg?raw=true" alt="" /></p>
+
+<p><em>Photo by <a href="https://unsplash.com/@riapuskas?utm_content=creditCopyText&amp;utm_medium=referral&amp;utm_source=unsplash">Ria</a> on <a href="https://unsplash.com/photos/factory-chimney-emitting-smoke-CvTaPeo3NRk?utm_content=creditCopyText&amp;utm_medium=referral&amp;utm_source=unsplash">Unsplash</a></em></p>
+
+<p>Taipy is a framework for building Data Science and AI web apps in Python. As such, it is a competitor to the likes of Streamlit or Dash, but it is distinct from both of those products.</p>
+
+<p>Taipy separates the user interface from the rest of the program logic and uses callbacks to add functionality to user controls. In this sense, it is closer to Dash than Streamlit where the user interface controls are often incorporated into the main Python code.</p>
+
+<p>Both Dash and Taipy are based on the Flask microframework, so it shouldn’t be a surprise that there are similarities but where in a Dash app, you essentially construct your user interface in HTML (but written with Python functions), Taipy has an additional layer of abstraction that lets the user define user controls that are closer to Streamlit than Dash.</p>
+
+<p>So, is Taipy the best of both worlds?  I wrote an introduction in <a href="https://medium.com/towards-data-science/a-data-dashboard-in-pure-python-with-taipy-bdb164a62b8b">A Data Dashboard in Pure Python with Taipy</a> that explores how to construct a web app in Taipy, so you can judge for yourselves how easy it is to use.</p>
+
+<p>This article goes a step further than the first by looking at how multipage apps can be constructed with Taipy but first let’s spend a minute constructing a simple one-page app (it’s only three lines of code!)</p>
+
+<p>If you want to code along, you will need a Python installation, 3.8 or newer, and you will need to…</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>pip <span class="nb">install </span>taipy
+</code></pre></div></div>
+
+<p>Of course!</p>
+
+<h3 id="hello-world-the-taipy-way">Hello World the Taipy way</h3>
+
+<p>The basic building block for a Taipy web app is a page. You define it in Python, Markdown or HTML (your choice) and then add the application logic in Python linking it to the user interface using callback functions.</p>
+
+<p>Here is the code for the ubiquitous ‘Hello World’ app.</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">from</span> <span class="n">taipy.gui</span> <span class="kn">import</span> <span class="n">Gui</span>
+
+<span class="n">page</span> <span class="o">=</span> <span class="sh">"</span><span class="s">## Hello World</span><span class="sh">"</span>
+
+<span class="nc">Gui</span><span class="p">(</span><span class="n">page</span><span class="o">=</span><span class="n">page</span><span class="p">).</span><span class="nf">run</span><span class="p">()</span>
+</code></pre></div></div>
+
+<p>As you can probably deduce, a single page is defined by a Markdown string, <code class="language-plaintext highlighter-rouge">page</code> and the app is started by passing that page to the <code class="language-plaintext highlighter-rouge">Gui()</code> function. (In a real application, the page would likely include controls for user input and callback functions written in Python linked to those controls.)</p>
+
+<p>You run the app as a normal Python application (file names are as per my GitHub repo - see note [2]):</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>python example0.py
+</code></pre></div></div>
+
+<p>And it will be available in your browser on your local host: http://127.0.0.1:5000/</p>
+
+<p><img src="https://github.com/alanjones2/taipyapps/blob/main/multipage/images/Screenshot_example0.png?raw=true" alt="" /></p>
+
+<p>Easy.</p>
+
+<h3 id="multiple-pages">Multiple pages</h3>
+
+<p>To display multiple pages it is simply a matter of defining those pages individually and giving each page a named endpoint. Navigation between the pages can be done explicitly, using the <code class="language-plaintext highlighter-rouge">navigate()</code> function or a built-in navigation bar.</p>
+
+<p>Shortly, we will build a multipage app and explore how to construct the pages and navigate between them using both methods. This app will define the pages in Python and will feature interactive charts and callbacks linked to the UI controls.</p>
+
+<p>But to illustrate the basic structure, here is the code for a simple two-page app that defines the pages as Markdown strings.</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">from</span> <span class="n">taipy.gui</span> <span class="kn">import</span> <span class="n">Gui</span>
+
+<span class="n">page1</span> <span class="o">=</span> <span class="sh">"</span><span class="s">## This is page 1</span><span class="sh">"</span>
+<span class="n">page2</span> <span class="o">=</span> <span class="sh">"</span><span class="s">## This is page 2</span><span class="sh">"</span>
+
+<span class="n">pages</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="sh">"</span><span class="s">page1</span><span class="sh">"</span><span class="p">:</span> <span class="n">page1</span><span class="p">,</span>
+    <span class="sh">"</span><span class="s">page2</span><span class="sh">"</span><span class="p">:</span> <span class="n">page2</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="nc">Gui</span><span class="p">(</span><span class="n">pages</span><span class="o">=</span><span class="n">pages</span><span class="p">).</span><span class="nf">run</span><span class="p">()</span>
+</code></pre></div></div>
+
+<p>The actual pages are defined in the strings <code class="language-plaintext highlighter-rouge">page1</code> and <code class="language-plaintext highlighter-rouge">page2</code> and display the Markdown text in those strings. The pages are grouped in a dictionary along with their endpoint names and these are then passed to the function <code class="language-plaintext highlighter-rouge">Gui</code> which runs the app.</p>
+
+<p>This code is in a file called <em>example1.py</em> so we run it, thus:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>python example1.py
+</code></pre></div></div>
+
+<p>The pages are named “page1” and “page2” and when you run the app locally “page1” is accessible on the local server: http://127.0.0.1:5000/page1 and “page2” on http://127.0.0.1:5000/page2.</p>
+
+<p>Ideally, of course, you want to have some sort of navigation between the pages. A simple way of doing this is to include a navigation bar.</p>
+
+<h3 id="navigation-bar">Navigation bar</h3>
+
+<p>Taipy provides a navigation bar control that you can use in a Markdown page definition. To use it as a common navigation bar across all pages, we need to define a third page which maps onto the root endpoint (<code class="language-plaintext highlighter-rouge">'/'</code>).</p>
+
+<p>You can see this in the code below. There is a new page called <code class="language-plaintext highlighter-rouge">root</code> which contains the navigation bar code. The other two pages are as before and the dictionary now contains a new entry for the root page.</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">from</span> <span class="n">taipy.gui</span> <span class="kn">import</span> <span class="n">Gui</span>
+
+<span class="n">root</span> <span class="o">=</span> <span class="sh">"""</span><span class="s">
+&lt;|navbar|&gt;  
+</span><span class="sh">"""</span>
+<span class="n">page1</span> <span class="o">=</span> <span class="sh">"</span><span class="s">## This is page 1</span><span class="sh">"</span>
+<span class="n">page2</span> <span class="o">=</span> <span class="sh">"</span><span class="s">## This is page 2</span><span class="sh">"</span>
+
+<span class="n">pages</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="sh">"</span><span class="s">/</span><span class="sh">"</span><span class="p">:</span> <span class="n">root</span><span class="p">,</span>
+    <span class="sh">"</span><span class="s">page1</span><span class="sh">"</span><span class="p">:</span> <span class="n">page1</span><span class="p">,</span>
+    <span class="sh">"</span><span class="s">page2</span><span class="sh">"</span><span class="p">:</span> <span class="n">page2</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="nc">Gui</span><span class="p">(</span><span class="n">pages</span><span class="o">=</span><span class="n">pages</span><span class="p">).</span><span class="nf">run</span><span class="p">()</span>
+</code></pre></div></div>
+
+<p>Now run:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>python example2.py
+</code></pre></div></div>
+
+<p>Navigate to http://127.0.0.1:5000/, and you will see that the navigation bar is displayed at the top of the screen and the browser will automatically navigate to the first page. You can then use the navigation bar to move from one page to the other. In the image below I have selected PAGE2.</p>
+
+<p><img src="https://github.com/alanjones2/taipyapps/blob/main/multipage/images/Screenshot_example2_dark.png?raw=true" alt="" /></p>
+
+<p>Taipy has created a sort of template for us where the content of the root endpoint is displayed as a header above all of the other pages.</p>
+
+<p>What if we want a footer, too?</p>
+
+<p>To create a website where the content of each page has a common header and footer we use the pseudo control <code class="language-plaintext highlighter-rouge">&lt;|content|&gt;</code> in the root page. This pseudo control explicitly tells Taipy where the content of the web page should be located (in the previous example it was implicitly located after the header).</p>
+
+<p>In the code below we see that the <code class="language-plaintext highlighter-rouge">root</code> page now contains the content pseudo control and it is placed immediately after the navigation bar. By doing this we can now add a footer to each page by simply adding more Markdown code after the content. In this case, the footer contains the text, <em>“This is a footer”</em>.</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">from</span> <span class="n">taipy.gui</span> <span class="kn">import</span> <span class="n">Gui</span>
+
+<span class="n">root</span> <span class="o">=</span> <span class="sh">"""</span><span class="s">
+&lt;|navbar|&gt;  
+&lt;|content|&gt;
+_This is a footer_
+</span><span class="sh">"""</span>
+
+<span class="n">page1</span> <span class="o">=</span> <span class="sh">"</span><span class="s">## This is page 1</span><span class="sh">"</span>
+<span class="n">page2</span> <span class="o">=</span> <span class="sh">"</span><span class="s">## This is page 2</span><span class="sh">"</span>
+
+<span class="n">pages</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="sh">"</span><span class="s">/</span><span class="sh">"</span><span class="p">:</span> <span class="n">root</span><span class="p">,</span>
+    <span class="sh">"</span><span class="s">page1</span><span class="sh">"</span><span class="p">:</span> <span class="n">page1</span><span class="p">,</span>
+    <span class="sh">"</span><span class="s">page2</span><span class="sh">"</span><span class="p">:</span> <span class="n">page2</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="nc">Gui</span><span class="p">(</span><span class="n">pages</span><span class="o">=</span><span class="n">pages</span><span class="p">).</span><span class="nf">run</span><span class="p">()</span>
+</code></pre></div></div>
+
+<p>You can see the result in the image below.</p>
+
+<p><img src="https://github.com/alanjones2/taipyapps/blob/main/multipage/images/Screenshot_example3_dark.png?raw=true" alt="" /></p>
+
+<p>Selecting page 2 would show the contents of page 2 with the same header and footer.</p>
+
+<h3 id="the-multipage-app">The multipage app</h3>
+
+<p>Let’s look at something a bit more interesting.</p>
+
+<p>We are going to develop a simple three-page app that explores CO2 emissions by country and by the source of the emissions.</p>
+
+<p>The app consists of a home page that gives us a summary of the app and ways to navigate to the other two pages,</p>
+
+<p>You can see a screenshot of the home page, below.</p>
+
+<p><img src="https://github.com/alanjones2/taipyapps/blob/main/multipage/images/appscreenshot.png?raw=true" alt="" /></p>
+
+<p>It is a simple app that consists of three pages: the home screen plus two pages that contain interactive graphs that explore sources of global CO2 emissions and a map of CO2 emissions by country. The graphs are drawn using Plotly.</p>
+
+<p>At the top of the screen is the navigation bar that links to the three pages that comprise the app, while, below the images on the home screen, are buttons that provide an alternative way of navigating between the pages.</p>
+
+<p>The other pages are shown below.</p>
+
+<p>The first is a bar graph of the CO2 emissions between 1850 and 2020 - you can show the total emissions or those from a particular source using the dropdown menu.</p>
+
+<p><img src="https://github.com/alanjones2/taipyapps/blob/main/multipage/images/co2emissionspagescreenshot.png?raw=true" alt="" /></p>
+
+<p>The second one is a choropleth showing annual CO2 emissions by country for a range of years.</p>
+
+<p><img src="https://github.com/alanjones2/taipyapps/blob/main/multipage/images/worldtemppagescreenshot.png?raw=true" alt="" /></p>
+
+<p>You can see how the header (navigation bar) and the footer are preserved in each page.</p>
+
+<p>Of course, these pages are more complicated than the simple strings that we have seen so far. So, to make things neat and easy to follow, we will define each page as a separate entity, we’ll define them in Python and we will make each page a package (i.e. each page will be in a separate Python file that we can import into the main program).</p>
+
+<p>The files for the pages will be called <em>home.py</em>, <em>CO2_src_chart.py</em> and <em>CO2_map.py</em>. In each of the page files we will define a variable <code class="language-plaintext highlighter-rouge">page</code> that will contain the page definition and those variables will be imported into the main program. In addition, there will be a main program <em>main.py</em>.</p>
+
+<p>Let’s take a look at <em>main.py</em>.</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">from</span> <span class="n">taipy.gui</span> <span class="kn">import</span> <span class="n">Gui</span>
+<span class="kn">from</span> <span class="n">pages.home</span> <span class="kn">import</span> <span class="n">page</span> <span class="k">as</span> <span class="n">homepage</span>
+<span class="kn">from</span> <span class="n">pages.CO2_src_chart</span> <span class="kn">import</span> <span class="n">page</span> <span class="k">as</span> <span class="n">co2page</span>
+<span class="kn">from</span> <span class="n">pages.CO2_map</span> <span class="kn">import</span> <span class="n">page</span> <span class="k">as</span> <span class="n">CO2countrypage</span>
+
+<span class="n">root_md</span> <span class="o">=</span> <span class="sh">"""</span><span class="s">
+&lt;|navbar|&gt;
+&lt;|content|&gt;  
+_Made with Taipy_    
+</span><span class="sh">"""</span>
+
+<span class="n">pages</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="sh">"</span><span class="s">/</span><span class="sh">"</span><span class="p">:</span> <span class="n">root_md</span><span class="p">,</span>
+    <span class="sh">"</span><span class="s">home</span><span class="sh">"</span><span class="p">:</span> <span class="n">homepage</span><span class="p">,</span>
+    <span class="sh">"</span><span class="s">CO2_Sources</span><span class="sh">"</span><span class="p">:</span> <span class="n">co2page</span><span class="p">,</span>
+    <span class="sh">"</span><span class="s">CO2_by_Country</span><span class="sh">"</span><span class="p">:</span><span class="n">CO2countrypage</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="nc">Gui</span><span class="p">(</span><span class="n">pages</span><span class="o">=</span><span class="n">pages</span><span class="p">).</span><span class="nf">run</span><span class="p">(</span><span class="n">dark_mode</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>As you can see it follows the same pattern as the simple apps that we saw before.  The main difference is that we import the pages from external files rather than defining them as strings. The root endpoint <em>is</em> defined as a Markdown string and is almost identical to the earlier ones.</p>
+
+<p>Running this file will give us a webpage with a navigation bar and a footer that says “<em>Made with Taipy</em>”.</p>
+
+<p>There is one more minor addition. In the call to the  <code class="language-plaintext highlighter-rouge">run</code> function (the last line), we set a parameter <code class="language-plaintext highlighter-rouge">dark_mode</code> to <code class="language-plaintext highlighter-rouge">False</code>. By default, Taipy uses dark mode for the display and this is the way to change it. I have nothing against dark mode but I think the lighter colours go better with the default Plotly theme in this app.</p>
+
+<h2 id="the-pages">The pages</h2>
+
+<p>I discussed creating webpages in Python with Taipy in <a href="https://medium.com/towards-data-science/a-data-dashboard-in-pure-python-with-taipy-bdb164a62b8b">A Data Dashboard in Pure Python with Taipy</a> so I’ll try not to repeat myself too much here.</p>
+
+<p>Defining pages as separate Python packages is very convenient and reminiscent of the way you design a multipage Streamlit app. Although, unlike Streamlit, you can locate the files wherever you want to; here we put them in a folder called <em>pages</em>. Let’s look at the simplest page first.</p>
+
+<h3 id="co2-sources-page">CO2 sources page</h3>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="n">taipy.gui.builder</span> <span class="k">as</span> <span class="n">tgb</span>
+<span class="kn">import</span> <span class="n">pandas</span> <span class="k">as</span> <span class="n">pd</span>
+<span class="kn">import</span> <span class="n">plotly.express</span> <span class="k">as</span> <span class="n">px</span>
+
+<span class="k">def</span> <span class="nf">plot_chart</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+    <span class="n">fig</span> <span class="o">=</span> <span class="n">px</span><span class="p">.</span><span class="nf">bar</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="sh">"</span><span class="s">Year</span><span class="sh">"</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="n">y</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">fig</span>
+
+<span class="k">def</span> <span class="nf">on_select</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">var</span><span class="p">,</span> <span class="n">val</span><span class="p">):</span>
+    <span class="n">state</span><span class="p">.</span><span class="n">fig2</span> <span class="o">=</span> <span class="nf">plot_chart</span><span class="p">(</span><span class="n">state</span><span class="p">.</span><span class="n">df</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="n">val</span><span class="p">)</span>
+
+<span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="p">.</span><span class="nf">read_csv</span><span class="p">(</span><span class="sh">"</span><span class="s">data/co2-emissions-by-category.csv</span><span class="sh">"</span><span class="p">)</span> 
+<span class="n">src</span> <span class="o">=</span> <span class="sh">"</span><span class="s">Total</span><span class="sh">"</span>
+<span class="n">fig2</span> <span class="o">=</span> <span class="nf">plot_chart</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">src</span><span class="p">)</span>
+
+<span class="k">with</span> <span class="n">tgb</span><span class="p">.</span><span class="nc">Page</span><span class="p">()</span> <span class="k">as</span> <span class="n">page</span><span class="p">:</span>
+    <span class="n">tgb</span><span class="p">.</span><span class="nf">text</span><span class="p">(</span> <span class="n">value</span> <span class="o">=</span> <span class="sh">"</span><span class="s">### CO2 Emissions by source since the mid-19th Century</span><span class="sh">"</span><span class="p">,</span> <span class="n">mode</span> <span class="o">=</span> <span class="sh">'</span><span class="s">md</span><span class="sh">'</span><span class="p">,</span> <span class="n">class_name</span><span class="o">=</span><span class="sh">"</span><span class="s">color-secondary</span><span class="sh">"</span><span class="p">)</span>
+    <span class="n">tgb</span><span class="p">.</span><span class="nf">selector</span><span class="p">(</span><span class="n">label</span><span class="o">=</span><span class="sh">"</span><span class="s">Select a CO2 Source</span><span class="sh">"</span><span class="p">,</span> 
+                    <span class="n">value</span><span class="o">=</span><span class="sh">"</span><span class="s">{src}</span><span class="sh">"</span><span class="p">,</span> 
+                    <span class="n">lov</span><span class="o">=</span><span class="sh">"</span><span class="s">Total;Coal;Oil;Gas;Cement</span><span class="sh">"</span><span class="p">,</span> 
+                    <span class="n">dropdown</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> 
+                    <span class="n">on_change</span><span class="o">=</span><span class="n">on_select</span><span class="p">)</span>
+    <span class="n">tgb</span><span class="p">.</span><span class="nf">chart</span><span class="p">(</span><span class="n">figure</span><span class="o">=</span><span class="sh">"</span><span class="s">{fig2}</span><span class="sh">"</span><span class="p">)</span>
+
+
+</code></pre></div></div>
+
+<p>This page displays the bar chart of CO2 emissions by source. To select the source it utilises a drop-down menu, the chart is drawn using Plotly and the data, derived from Our World in Data[1], are read from a CSV file. The page itself is constructed using Taipy’s GUI Builder package.</p>
+
+<p>The imports are self-explanatory and, for the moment, let’s ignore the function definitions. The first code to be executed sets up some state (global) variables that will be used to create the default page:</p>
+
+<ul>
+  <li>
+    <p><code class="language-plaintext highlighter-rouge">df</code> is a Pandas dataframe with the emissions data</p>
+  </li>
+  <li>
+    <p><code class="language-plaintext highlighter-rouge">src</code> is a string - the default CO2 source</p>
+  </li>
+  <li>
+    <p><code class="language-plaintext highlighter-rouge">fig2</code> is set to an initial bar chart</p>
+  </li>
+</ul>
+
+<p><img src="https://github.com/alanjones2/taipyapps/blob/main/multipage/images/co2sourcedata.png?raw=true" alt="" /></p>
+
+<p>You can see a snapshot of the data above. In the bar chart, we will be displaying the total emissions or those sourced from coal, oil, gas, and cement over all of the years covered in the data.</p>
+
+<p>Let’s see how we construct the page.</p>
+
+<p>We use <code class="language-plaintext highlighter-rouge">tgb.Page()</code> to create a variable called <code class="language-plaintext highlighter-rouge">page</code> and  use a <code class="language-plaintext highlighter-rouge">with</code> statement to create the elements within the page.</p>
+
+<p>The first element is a simple header in a Markdown string and the last element is a chart which takes the state variable <code class="language-plaintext highlighter-rouge">fig2</code> as a parameter (the curly brace notation binds the state variable <code class="language-plaintext highlighter-rouge">fig2</code> to the chart element so that whenever <code class="language-plaintext highlighter-rouge">fig2</code> is updated the chart element is updated, too).</p>
+
+<p>This leaves the bit in the middle which is a call to <code class="language-plaintext highlighter-rouge">tgb.selector()</code>  -  this implements the drop-down menu.</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="n">tgb</span><span class="p">.</span><span class="nf">selector</span><span class="p">(</span><span class="n">label</span><span class="o">=</span><span class="sh">"</span><span class="s">Select a CO2 Source</span><span class="sh">"</span><span class="p">,</span> 
+                    <span class="n">value</span><span class="o">=</span><span class="sh">"</span><span class="s">{src}</span><span class="sh">"</span><span class="p">,</span> 
+                    <span class="n">lov</span><span class="o">=</span><span class="sh">"</span><span class="s">Total;Coal;Oil;Gas;Cement</span><span class="sh">"</span><span class="p">,</span> 
+                    <span class="n">dropdown</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> 
+                    <span class="n">on_change</span><span class="o">=</span><span class="n">on_select</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>The parameter values are:</p>
+
+<ul>
+  <li>
+    <p>a label for the menu,</p>
+  </li>
+  <li>
+    <p>the default menu selection,</p>
+  </li>
+  <li>
+    <p>the list of variables that will appear in the menu “Total;Coal;Oil;Gas;Cement”,</p>
+  </li>
+  <li>
+    <p>a flag to determine whether the menu drops down (otherwise it is a fixed menu),</p>
+  </li>
+  <li>
+    <p>the callback function that will be called when the menu selection changes.</p>
+  </li>
+</ul>
+
+<p>So the default selection is “Total” (we initialised it earlier) and when we change this the function <code class="language-plaintext highlighter-rouge">on_select()</code> is called.</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">on_select</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">var</span><span class="p">,</span> <span class="n">val</span><span class="p">):</span>
+    <span class="n">state</span><span class="p">.</span><span class="n">fig2</span> <span class="o">=</span> <span class="nf">plot_chart</span><span class="p">(</span><span class="n">state</span><span class="p">.</span><span class="n">df</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="n">val</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>All callback functions have the same default parameters:</p>
+
+<p><code class="language-plaintext highlighter-rouge">state</code>: is the set of state (global) variables,</p>
+
+<p><code class="language-plaintext highlighter-rouge">var</code>: is the name of the variable that is bound to the called control,</p>
+
+<p><code class="language-plaintext highlighter-rouge">val</code>: is the value of <code class="language-plaintext highlighter-rouge">var</code>.</p>
+
+<p>And we use these to call the plotting function and update the state variable <code class="language-plaintext highlighter-rouge">fig2</code> which, because it is bound to the chart element on the page, means that the chart element is updated with the chart for the newly selected CO2 source.</p>
+
+<h3 id="co2-map-page">CO2 Map page</h3>
+
+<p>This page looks more complex the the previous one but that is mainly due to the extra code needed to create a choropleth.</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="n">taipy.gui.builder</span> <span class="k">as</span> <span class="n">tgb</span>
+<span class="kn">import</span> <span class="n">pandas</span> <span class="k">as</span> <span class="n">pd</span>
+<span class="kn">import</span> <span class="n">plotly.express</span> <span class="k">as</span> <span class="n">px</span>
+
+<span class="n">year_max</span> <span class="o">=</span> <span class="mi">2020</span>
+<span class="n">year_min</span> <span class="o">=</span> <span class="mi">1950</span>
+<span class="n">year</span> <span class="o">=</span> <span class="n">year_max</span>
+
+<span class="c1"># define parameters for map graphic
+</span><span class="n">df_total</span> <span class="o">=</span> <span class="n">pd</span><span class="p">.</span><span class="nf">read_csv</span><span class="p">(</span><span class="sh">'</span><span class="s">data/co2_total.csv</span><span class="sh">'</span><span class="p">)</span>
+<span class="n">col</span> <span class="o">=</span> <span class="sh">'</span><span class="s">Annual CO₂ emissions</span><span class="sh">'</span>    <span class="c1"># the column that contains the emissions data
+</span><span class="nb">max</span> <span class="o">=</span> <span class="n">df_total</span><span class="p">[</span><span class="n">col</span><span class="p">].</span><span class="nf">max</span><span class="p">()</span>       <span class="c1"># maximum emissions value for color range
+</span><span class="nb">min</span> <span class="o">=</span> <span class="n">df_total</span><span class="p">[</span><span class="n">col</span><span class="p">].</span><span class="nf">min</span><span class="p">()</span>       <span class="c1"># minimum emissions value for color range
+</span>
+<span class="k">def</span> <span class="nf">plot_choro</span><span class="p">(</span><span class="n">year</span><span class="p">):</span>
+    <span class="n">fig</span> <span class="o">=</span> <span class="n">px</span><span class="p">.</span><span class="nf">choropleth</span><span class="p">(</span><span class="n">df_total</span><span class="p">[</span><span class="n">df_total</span><span class="p">[</span><span class="sh">'</span><span class="s">Year</span><span class="sh">'</span><span class="p">]</span><span class="o">==</span><span class="n">year</span><span class="p">],</span> 
+        <span class="n">locations</span><span class="o">=</span><span class="sh">"</span><span class="s">Code</span><span class="sh">"</span><span class="p">,</span>       <span class="c1"># The ISO code for the Entity (country)
+</span>        <span class="n">color</span><span class="o">=</span><span class="n">col</span><span class="p">,</span>              <span class="c1"># color is set by this column
+</span>        <span class="n">hover_name</span><span class="o">=</span><span class="sh">"</span><span class="s">Entity</span><span class="sh">"</span><span class="p">,</span>    <span class="c1"># hover name is the name of the Entity (country)
+</span>        <span class="n">range_color</span><span class="o">=</span><span class="p">(</span><span class="nb">min</span><span class="p">,</span><span class="nb">max</span><span class="p">),</span>  <span class="c1"># the range of values as set above
+</span>        <span class="n">scope</span><span class="o">=</span> <span class="sh">'</span><span class="s">world</span><span class="sh">'</span><span class="p">,</span>         <span class="c1"># a world map - the default
+</span>        <span class="n">projection</span><span class="o">=</span><span class="sh">'</span><span class="s">equirectangular</span><span class="sh">'</span><span class="p">,</span> 
+        <span class="n">title</span><span class="o">=</span><span class="sa">f</span><span class="sh">"</span><span class="s">CO2 Emissions by country in </span><span class="si">{</span><span class="n">year</span><span class="si">}</span><span class="sh">"</span><span class="p">,</span>
+        <span class="n">color_continuous_scale</span><span class="o">=</span><span class="n">px</span><span class="p">.</span><span class="n">colors</span><span class="p">.</span><span class="n">sequential</span><span class="p">.</span><span class="n">Reds</span>
+        <span class="p">)</span>
+
+    <span class="n">fig</span><span class="p">.</span><span class="nf">update_layout</span><span class="p">(</span>
+        <span class="n">margin</span><span class="o">=</span><span class="nf">dict</span><span class="p">(</span><span class="n">l</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">r</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">t</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span>
+        <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">fig</span>
+
+<span class="n">fig</span> <span class="o">=</span> <span class="nf">plot_choro</span><span class="p">(</span><span class="n">year_max</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">on_slider</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">var</span><span class="p">,</span> <span class="n">val</span><span class="p">):</span>    
+    <span class="n">state</span><span class="p">.</span><span class="n">fig</span> <span class="o">=</span> <span class="nf">plot_choro</span><span class="p">(</span><span class="n">val</span><span class="p">)</span>
+
+<span class="k">with</span> <span class="n">tgb</span><span class="p">.</span><span class="nc">Page</span><span class="p">()</span> <span class="k">as</span> <span class="n">page</span><span class="p">:</span>
+    <span class="n">tgb</span><span class="p">.</span><span class="nf">text</span><span class="p">(</span> <span class="n">value</span><span class="o">=</span> <span class="sa">f</span><span class="sh">"</span><span class="s">### Country CO2 Emissions from </span><span class="si">{</span><span class="n">year_min</span><span class="si">}</span><span class="s"> to </span><span class="si">{</span><span class="n">year_max</span><span class="si">}</span><span class="sh">"</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="sh">'</span><span class="s">md</span><span class="sh">'</span><span class="p">,</span> <span class="n">class_name</span><span class="o">=</span><span class="sh">"</span><span class="s">color-secondary</span><span class="sh">"</span><span class="p">)</span>
+    <span class="n">tgb</span><span class="p">.</span><span class="nf">text</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="sh">"</span><span class="s">#### Use the slider to select a year</span><span class="sh">"</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="sh">'</span><span class="s">md</span><span class="sh">'</span><span class="p">)</span>
+    <span class="n">tgb</span><span class="p">.</span><span class="nf">slider</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="sh">"</span><span class="s">{year}</span><span class="sh">"</span><span class="p">,</span> <span class="nb">min</span><span class="o">=</span><span class="n">year_min</span><span class="p">,</span> <span class="nb">max</span><span class="o">=</span><span class="n">year_max</span><span class="p">,</span> <span class="n">on_change</span><span class="o">=</span><span class="n">on_slider</span><span class="p">)</span>
+    <span class="n">tgb</span><span class="p">.</span><span class="nf">chart</span><span class="p">(</span><span class="n">figure</span><span class="o">=</span><span class="sh">"</span><span class="s">{fig}</span><span class="sh">"</span><span class="p">)</span>
+
+</code></pre></div></div>
+
+<p>If you look closely you will see that the structure is very similar to the <em>CO2 Sources</em> page. The main difference to the page layout is that we include a slider element instead of a menu. The remainder is much the same: some state variables are given initial values; there is a plotting function; and there is a callback function that calls the plotting function in the same way as before.</p>
+
+<p>The more interesting page is the home page as this uses the <code class="language-plaintext highlighter-rouge">navigate()</code> function to implement navigation separately from the menu bar.</p>
+
+<h3 id="the-home-page-with-button-navigation">The Home page with button navigation</h3>
+
+<p>Here we demonstrate the second method of navigation. We still have the navigation bar (that’s on all of the pages) but here we also see the use of the <code class="language-plaintext highlighter-rouge">navigate()</code> function.</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">from</span> <span class="n">taipy.gui</span> <span class="kn">import</span> <span class="n">navigate</span>
+<span class="kn">import</span> <span class="n">taipy.gui.builder</span> <span class="k">as</span> <span class="n">tgb</span>
+
+<span class="k">def</span> <span class="nf">on_button_press</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="nb">id</span><span class="p">):</span>
+    <span class="n">page</span> <span class="o">=</span> <span class="sh">"</span><span class="s">home</span><span class="sh">"</span>
+    <span class="k">if</span> <span class="nb">id</span> <span class="o">==</span> <span class="sh">"</span><span class="s">CO2</span><span class="sh">"</span><span class="p">:</span> <span class="n">page</span> <span class="o">=</span> <span class="sh">"</span><span class="s">CO2_Sources</span><span class="sh">"</span> 
+    <span class="k">if</span> <span class="nb">id</span> <span class="o">==</span> <span class="sh">"</span><span class="s">CO2Country</span><span class="sh">"</span><span class="p">:</span> <span class="n">page</span> <span class="o">=</span> <span class="sh">"</span><span class="s">CO2_by_Country</span><span class="sh">"</span>
+    <span class="nf">navigate</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">to</span><span class="o">=</span><span class="n">page</span><span class="p">)</span>
+
+<span class="k">with</span> <span class="n">tgb</span><span class="p">.</span><span class="nc">Page</span><span class="p">()</span> <span class="k">as</span> <span class="n">page</span><span class="p">:</span>
+    <span class="n">tgb</span><span class="p">.</span><span class="nf">text</span><span class="p">(</span> <span class="n">value</span> <span class="o">=</span> <span class="sh">"</span><span class="s">## World CO2 Emissions</span><span class="sh">"</span><span class="p">,</span> <span class="n">mode</span> <span class="o">=</span> <span class="sh">'</span><span class="s">md</span><span class="sh">'</span><span class="p">,</span> <span class="n">class_name</span><span class="o">=</span><span class="sh">"</span><span class="s">color-secondary</span><span class="sh">"</span><span class="p">)</span>
+    <span class="n">tgb</span><span class="p">.</span><span class="nf">text</span><span class="p">(</span> <span class="n">value</span> <span class="o">=</span> <span class="sh">"</span><span class="s">#### Explore the graphs using the navigation bar above, or the buttons below.</span><span class="sh">"</span><span class="p">,</span> 
+             <span class="n">mode</span> <span class="o">=</span> <span class="sh">'</span><span class="s">md</span><span class="sh">'</span><span class="p">)</span>
+    <span class="k">with</span> <span class="n">tgb</span><span class="p">.</span><span class="nf">layout</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="sh">"</span><span class="s">1 1</span><span class="sh">"</span><span class="p">):</span>
+        <span class="k">with</span> <span class="n">tgb</span><span class="p">.</span><span class="nf">part</span><span class="p">():</span>
+            <span class="n">tgb</span><span class="p">.</span><span class="nf">text</span><span class="p">(</span><span class="sh">"</span><span class="s">![](images/co2emissionspagesmall.png)</span><span class="sh">"</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="sh">'</span><span class="s">md</span><span class="sh">'</span><span class="p">)</span> 
+            <span class="k">with</span> <span class="n">tgb</span><span class="p">.</span><span class="nf">layout</span><span class="p">(</span><span class="sh">"</span><span class="s">2 1</span><span class="sh">"</span><span class="p">):</span>
+                <span class="k">with</span> <span class="n">tgb</span><span class="p">.</span><span class="nf">part</span><span class="p">():</span>
+                    <span class="n">tgb</span><span class="p">.</span><span class="nf">text</span><span class="p">(</span><span class="sh">"</span><span class="s">__Select the Co2 Emissions page here:__</span><span class="sh">"</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="sh">'</span><span class="s">md</span><span class="sh">'</span><span class="p">)</span>
+                <span class="k">with</span> <span class="n">tgb</span><span class="p">.</span><span class="nf">part</span><span class="p">():</span>
+                    <span class="n">tgb</span><span class="p">.</span><span class="nf">button</span><span class="p">(</span><span class="sh">"</span><span class="s">CO2 by source</span><span class="sh">"</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="sh">"</span><span class="s">CO2</span><span class="sh">"</span><span class="p">,</span>  <span class="n">on_action</span><span class="o">=</span><span class="n">on_button_press</span><span class="p">)</span>
+        <span class="k">with</span> <span class="n">tgb</span><span class="p">.</span><span class="nf">part</span><span class="p">():</span>
+            <span class="n">tgb</span><span class="p">.</span><span class="nf">text</span><span class="p">(</span><span class="sh">"</span><span class="s">![](images/worldtemppagesmall.png)</span><span class="sh">"</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="sh">'</span><span class="s">md</span><span class="sh">'</span><span class="p">)</span> 
+            <span class="k">with</span> <span class="n">tgb</span><span class="p">.</span><span class="nf">layout</span><span class="p">(</span><span class="sh">"</span><span class="s">2 1</span><span class="sh">"</span><span class="p">):</span>
+                <span class="k">with</span> <span class="n">tgb</span><span class="p">.</span><span class="nf">part</span><span class="p">():</span>
+                    <span class="n">tgb</span><span class="p">.</span><span class="nf">text</span><span class="p">(</span><span class="sh">"</span><span class="s">__Select CO2 by Country page here:__</span><span class="sh">"</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="sh">'</span><span class="s">md</span><span class="sh">'</span><span class="p">)</span>
+                <span class="k">with</span> <span class="n">tgb</span><span class="p">.</span><span class="nf">part</span><span class="p">():</span>
+                    <span class="n">tgb</span><span class="p">.</span><span class="nf">button</span><span class="p">(</span><span class="sh">"</span><span class="s">CO2 by Country</span><span class="sh">"</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="sh">"</span><span class="s">CO2Country</span><span class="sh">"</span><span class="p">,</span> <span class="n">on_action</span><span class="o">=</span><span class="n">on_button_press</span><span class="p">)</span>
+
+</code></pre></div></div>
+
+<p>The page begins with text headers and then is split into two columns - each column is defined in a <code class="language-plaintext highlighter-rouge">tgb.part()</code>. In those columns we display images of the other pages via Markdown text and then, below the images there are two more columns, the left one for a label and the right one for a button. The callback function defined for the two buttons is the same. <code class="language-plaintext highlighter-rouge">on_button_press()</code> and each button had an <code class="language-plaintext highlighter-rouge">id </code>set for it - this id will be passed into the callback function.</p>
+
+<p>The callback, itself, looks at the <code class="language-plaintext highlighter-rouge">id </code>and determines which page to navigate to using the <code class="language-plaintext highlighter-rouge">navigate()</code> function, which, as you can see, requires the state and a page name to be passed to it.</p>
+
+<p>And that’s it.</p>
+
+<h2 id="conclusion">Conclusion</h2>
+
+<p>We’ve seen how easy it is to create a multipage app in Taipy by creating each page in a separate file, setting the content to a local variable <code class="language-plaintext highlighter-rouge">page </code>and then importing each of the pages into a main program.</p>
+
+<p>Navigation can be automatically included using a navigation bar control or by explicit use of the <code class="language-plaintext highlighter-rouge">navigation </code>function.</p>
+
+<p>Taipy, an interesting alternative to Dash or Streamlit, has a character and capabilities of its own. It is not such a mature product as the other two, perhaps, but looks very capable.</p>
+
+<hr />
+
+<p>Thanks for reading and I hope you enjoyed this look at multipage apps in Taipy. Please download the code and data (link below) and give it a go. Any opinions, criticisms or any other comments are always welcome.</p>
+
+<p>To see more articles, follow me here on <a href="https://medium.com/@alan-jones/subscribe">Medium</a>, or subscribe to my free, occasional, <a href="http://technofile.substack.com/">newsletter</a>. Older articles are listed on my <a href="http://alanjones2.github.io/">webpage</a>.</p>
+
+<h1 id="notes">Notes</h1>
+
+<ol>
+  <li>The data used in this article is derived from <a href="https://ourworldindata.org/">Our World in Data</a>. OWD publishes articles and data about the most pressing problems that the world faces. All its content is open source and its data is downloadable — see <a href="https://ourworldindata.org/about">About — Our World in Data</a> for details.</li>
+  <li>Code and data for this app are available in my <a href="https://github.com/alanjones2/taipyapps">GitHub</a> repo in the folder ‘multipage’.</li>
+  <li>All images, screenshots, diagrams, etc. are by me, the author, unless otherwise noted.</li>
+  <li>While there is a commercial version of Taipy, this article uses the open source version.</li>
+  <li>Disclaimer: I have no connection with Taipy other than as a user of their products.</li>
+</ol>
+
+      </div>
+    </div>
+    <div class="col-sm-3">
+      Sponsored content
+    <!--ads etc here -->
+    <!-- streamlit from scratch-->
+    <div class="p-4 shadow-sm mb-4 rounded border border-secondary bg-light">
+        <div>
+            <i>eBook</i>
+            <img class="mr-3" src="" width='80%' height='auto' alt="">
+            <h5>
+                <a href="https://alanjones2.github.io/streamlitfromscratch/" target="_blank">
+                    <span class="text-dark">Streamlitfrom Scratch</span>
+                </a>
+            </h5>
+            <p><b>Streamlit</b> is a framework for creating Data Science apps in Python.
+                <br />
+                <b>Streamlit from Scratch</b> is an ebook that will teach you how to get started with
+                Streamlit.
+            </p>
+
+        </div>
+    </div>
+
+    <!-- google add start-->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3208991186670959"
+        crossorigin="anonymous"></script>
+    <!-- sfs vertical -->
+    <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3208991186670959" data-ad-slot="6617299104"
+        data-ad-format="auto" data-full-width-responsive="true"></ins>
+    <script>
+        (adsbygoogle = window.adsbygoogle || []).push({});
+    </script>
+    <!-- google add end-->
+
+
+    <!-- how charts work-->
+    <div class="p-4 shadow-sm mb-4 rounded border border-secondary bg-light">
+        <div>
+            <i>Sponsored content</i>
+            <img class="mr-3" src="https://m.media-amazon.com/images/I/61y5lxsc9DL._SY466_.jpg" width='80%'
+                height='auto' alt="">
+            <h5 class="mt-0">
+                <a href="https://amzn.to/47FKuiz" target="_blank">
+                    <span class="text-dark">How Charts Work: Understand and explain data with
+                        confidence</span>
+                </a>
+            </h5>
+            <h6>From the Back Cover</h6>
+            <p>
+                How Charts Work brings the secrets of effective data visualisation in a way that will
+                help you bring data alive.
+                Charts, graphs and tables are essential devices in business, but all too often they
+                present information poorly.
+                This
+                book will help you:
+
+                <li>Feel confident understanding different types of charts, graphs and tables – and how
+                    to read them</li>
+                <li>Recognise the true story behind the data presented and what the information really
+                    shows</li>
+                <li>Know the principles and rules of how best to represent information so you can create
+                    your own
+                    information-driven (and
+                    beautiful) visuals</li>
+                <li>Design visuals that people engage with, understand and act upon</li>
+            </p>
+
+        </div>
+    </div>
+    <!-- google add start-->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3208991186670959"
+        crossorigin="anonymous"></script>
+    <!-- sfs vertical -->
+    <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3208991186670959" data-ad-slot="6617299104"
+        data-ad-format="auto" data-full-width-responsive="true"></ins>
+    <script>
+        (adsbygoogle = window.adsbygoogle || []).push({});
+    </script>
+    <!-- google add end-->
+
+    <!-- the art of statistics-->
+    <div class="p-4 shadow-sm mb-4 rounded border border-secondary bg-light">
+        <div>
+            <i>Sponsored content</i>
+            <img class="mr-3" src="https://m.media-amazon.com/images/I/61eFjiH7sIL._SY264_BO1,204,203,200_QL40_ML2_.jpg"
+                width='80%' height='auto' alt="">
+            <h5 class="mt-0">
+                <a href="https://amzn.to/3kVBGmo" target="_blank">
+                    <span class="text-dark">The Art of Statistics: How to Learn from Data</span>
+                </a>
+            </h5>
+            Discover how data literacy is changing the world and gives you a better understanding of
+            life's biggest problems. I have used this book in various articles and found it to be
+            invaluable.
+
+        </div>
+    </div>
+
+    <!-- google add start-->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3208991186670959"
+        crossorigin="anonymous"></script>
+    <!-- sfs vertical -->
+    <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3208991186670959" data-ad-slot="6617299104"
+        data-ad-format="auto" data-full-width-responsive="true"></ins>
+    <script>
+        (adsbygoogle = window.adsbygoogle || []).push({});
+    </script>
+    <!-- google add end-->
+
+    <div class="p-4 shadow-sm mb-4 rounded border border-secondary bg-light">
+
+        <i>eBook</i>
+        <h5><a href='https://alanjones.gumroad.com/l/auiws' target='_blank'>Plotting with Pandas</a>
+        </h5>
+        <p>
+            <b>Plotting with Pandas: an Introduction to Data Visualization</b> is an ebook that covers basic and
+            statistical plots using Python and Pandas, line and bar charts, scatter plots, pie charts,
+            histograms, box plots, etc.
+        </p>
+
+
+
+    </div>
+
+    <!-- google add start-->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3208991186670959"
+        crossorigin="anonymous"></script>
+    <!-- sfs vertical -->
+    <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3208991186670959" data-ad-slot="6617299104"
+        data-ad-format="auto" data-full-width-responsive="true"></ins>
+    <script>
+        (adsbygoogle = window.adsbygoogle || []).push({});
+    </script>
+    <!-- google add end-->
+
+    <!-- storytelling in data-->
+    <div class="p-4 shadow-sm mb-4 rounded border border-secondary bg-light">
+        <div>
+            <i>Sponsored content</i>
+            <img class="mr-3" src="https://m.media-amazon.com/images/I/41OonY0kRWL._SX399_BO1,204,203,200_.jpg"
+                width='80%' height='auto' alt="">
+            <h5 class="mt-0">
+                <a href="https://amzn.to/3JmzEFq" target="_blank">
+                    <span class="text-dark">Storytelling with Data: A Data Visualization Guide for
+                        Business</span>
+                </a>
+            </h5>
+            Don't simply show your data - tell a story with it! Storytelling with Data teaches you
+            the fundamentals of data visualization and how to communicate effectively with data. I
+            use this book in the series of articles '12 Essential Visualizations and How to
+            Implement them.
+
+        </div>
+    </div>
+
+    <!-- google add start-->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3208991186670959"
+        crossorigin="anonymous"></script>
+    <!-- sfs vertical -->
+    <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3208991186670959" data-ad-slot="6617299104"
+        data-ad-format="auto" data-full-width-responsive="true"></ins>
+    <script>
+        (adsbygoogle = window.adsbygoogle || []).push({});
+    </script>
+    <!-- google add end-->
+
+    <!-- How charts lie -->
+    <div class="p-4 shadow-sm mb-4 rounded border border-secondary bg-light">
+        <div>
+            <i>Sponsored content</i>
+            <img class="mr-3" src="https://m.media-amazon.com/images/I/41N21MzfCRL._SX329_BO1,204,203,200_.jpg"
+                width='80%' height='auto' alt="">
+            <h5 class="mt-0">
+                <a href="https://amzn.to/3ZuQO9B" target="_blank">
+                    <span class="text-dark">How Charts Lie: Getting Smarter about Visual
+                        Information</span>
+                </a>
+            </h5>
+            A leading data visualization expert explores the negative - and positive - influences
+            that charts have on our perception of truth. I used this book as the inspiration for
+            'How Not to Lie with Charts'.
+
+        </div>
+    </div>
+
+
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3208991186670959"
+        crossorigin="anonymous"></script>
+    <!-- sfs vertical -->
+    <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3208991186670959" data-ad-slot="6617299104"
+        data-ad-format="auto" data-full-width-responsive="true"></ins>
+    <script>
+        (adsbygoogle = window.adsbygoogle || []).push({});
+    </script>
+
+    <div id="amzn-assoc-ad-d5bf4dcd-55c6-4038-a3d8-ff8bfa49de8a"></div>
+    <script async
+        src="//z-na.amazon-adsystem.com/widgets/onejs?MarketPlace=US&adInstanceId=d5bf4dcd-55c6-4038-a3d8-ff8bfa49de8a"></script>
+
+</div>
+
+  </div><a class="u-url" href="/2024/09/10/mulitpage-taipy.html" hidden></a>
+</article>
+      </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-kenU1KFdBIe4zVF0s0G1M5b4hcpxyD9F7jL+jjXkk+Q2h455rYXK/7HAuoJl+0I4" crossorigin="anonymous"></script>
+
+  </body>
+
+</html>

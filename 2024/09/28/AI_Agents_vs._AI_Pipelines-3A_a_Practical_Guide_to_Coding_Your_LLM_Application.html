@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  
+  <link rel="stylesheet" href="/assets/main.css">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-rbsA2VBKQhggwzxH7pPCaAqO46MgnOM80zW1RWuH61DGLwZJEdK2Kadq2F9CUG65" crossorigin="anonymous"><link type="application/atom+xml" rel="alternate" href="http://localhost:4000/feed.xml" title="Data Visualization, Data Science and AI" /></head>
+<body class="container" style="background-color:ghostwhite;"><header><!--</header> class="site-header" role="banner" style="background-color: white">-->
+  <div class="wrapper mb-2"><a class="site-title" style="font-size: larger;" rel="author" href="https://datavizandai.github.io">Data Visualization, Data Science and AI</a>
+    <a class="site-nav" rel="author" href="/about">About</a>
+  </div>
+</header><main class="container" aria-label="Content">
+      <div >
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">AI Agents vs. AI Pipelines - A Practical Guide to Coding Your LLM Application</h1>
+    <h3>We use CrewAI to create apps that demonstrate how to choose the right architecture for your LLM application</h3>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2024-09-28T00:00:00+02:00" itemprop="datePublished">Sep 28, 2024
+      </time></p>
+  </header>
+
+  <div class="row">
+    <div class="col-sm-9">
+      <div class="post-content e-content" itemprop="articleBody">
+        <p><img src="/assets/images/agentpipeline/image.png" alt="" />
+<em>An agent and a pipeline — based on an image created with Microsoft Bing Image Creator</em></p>
+
+<p>We can think of an AI agent as an LLM with access to external tools; it runs in a loop, making decisions about how to behave and what tools to use at each iteration.</p>
+
+<p>In doing this, the agent can solve much more complex problems than a conventional LLM app. (I explored how to build such an agent from scratch in the article <a href="https://ai.gopubby.com/how-to-build-a-react-ai-agent-with-claude-3-5-and-python-95423f798640"><strong>How to Build a ReAct AI Agent with Claude 3.5 and Python</strong></a>)</p>
+
+<p>AI Agents are powerful and a long step beyond a conventional chat application. But they are not always the right solution.</p>
+
+<p>Sometimes a sequence of more conventional functions is more appropriate. We can think of this type of application as a pipeline, where a solution is developed by passing the output of one function as the input to the next.</p>
+
+<p>In this article, we will explore the use of AI agents and pipelines and what types of applications they are most suited to. We will use the CrewAI open-source framework to create the LLM logic and build a simple front end in Streamlit for an online app.</p>
+
+<h4 id="apps-for-agents-apps-for-pipelines">Apps for agents, apps for pipelines</h4>
+
+<p>Let’s think about a couple of different apps. </p>
+
+<p>A customer logs on to a manufacturer’s website to solve a problem that they are having with their washing machine. He is greeted by an AI agent that wants to help. What make and model is the machine? What are the symptoms? Are the clothes still dirty? Is there water on the floor? Is it refusing to spin?</p>
+
+<p>There are a whole load of questions that the agent might ask to solve whatever problem the customer has. And subsequent questions will depend on previous answers.</p>
+
+<p>Here, an AI agent is a great solution. It needs to run in a loop gathering information until it is in a position either to suggest a solution or, if it has run out of ideas, pass the problem on to a human operator.</p>
+
+<p>The operation of this type of agent is represented in the diagram below.</p>
+
+<p><img src="/assets/images/agentpipeline/reactflow.png" alt="" /></p>
+
+<p>Here’s another scenario.</p>
+
+<p>The sales director of a small company that runs coffee shops in London wants to produce a report on the performance of several branches. She regularly needs to see how the performance differs between outlets located in the financial district of the City and the more tourist- and retail-focused West End. She has spreadsheets detailing the sales for each branch. She wants to consolidate the numbers and write a report for her board of directors that includes easily understood charts that show the relative performance of each coffee shop.</p>
+
+<p>In this case, the director could use an LLM app to combine monthly sales figures into a single entity, write a commentary on the performance of the different outlets, produce the appropriate charts and combine these elements into a single report. It’s the same process each month and the only variable is the values in the spreadsheets. So, while the content of the report will vary, the process is the same.</p>
+
+<p>Unlike the agentic example, this is a simple sequential flow.</p>
+
+<p><img src="/assets/images/agentpipeline/pipelineflow.png" alt="" /></p>
+
+<p>An AI agent is an ideal solution for the first problem. Given that it is provided with the appropriate information on the operation of the washing machine, its potential failure modes and the symptoms of those failures, the agent can intelligently search out information and pose new questions in response to the customer’s input until it comes up with a solution. For this sort of problem, the AI agent provides a flexible and intelligent solution.</p>
+
+<p>A sales report is a different matter. Sales figures change and it may be that a report would find differences in performance depending on the time of year and the prevalence of tourists or office workers.</p>
+
+<p>So while an intelligent view of those changing figures is necessary, the processes for creating the report are the same. Consolidate the figures; analyse the sales results; create the charts; and finally, write the complete report.</p>
+
+<p>You could write a prompt for an agent that would direct it to go through the necessary steps but a more consistent result might come from designing a series of tasks where the output of one feeds into the input of the next.</p>
+
+<h3 id="crewai">CrewAI</h3>
+
+<p>We’ll use CrewAI to create two example apps. CrewAI gives us a simple way of creating agents, defining tasks and connecting them. And, while it is not the only open-source framework that we could use, it serves to easily illustrate our topic.</p>
+
+<p>We’ll start by using Jupyter Notebooks and convert them into free-standing apps later.</p>
+
+<p>We can use any AI chat API, I used Claude 3.5 to build the ReAct agent in my previous <a href="https://ai.gopubby.com/how-to-build-a-react-ai-agent-with-claude-3-5-and-python-95423f798640">article</a> but CrewAI uses OpenAI by default, so we’ll go with that.</p>
+
+<p>You should bear in mind that if you want to code along with the article you will need an OpenAI API key and you may be charged for using it - a simple call to the API, such as we will use here, costs only a few cents but, of course, the more calls you make the more your bill will accumulate, so make sure that you keep an eye on your usage in the OpenAI dashboard.</p>
+
+<p>CrewAI comes in two flavours, Enterprise and Open Source. We will use the open-source version here, so no API keys or cost is involved in that.</p>
+
+<p>Installing CrewAI is what you would expect, although, as we will be using external tools, we need to add that functionality, too.</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>pip <span class="nb">install </span>crewai crewai-tools
+</code></pre></div></div>
+
+<p>We will create a tool for CrewAI to use based on the Wikipedia library from PyPi so we will also need to install that.</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>pip <span class="nb">install </span>wikipedia
+</code></pre></div></div>
+
+<p>The first app that we will develop is called Intelligent Wikipedia. It will take a query and then use the Wikipedia tool to find an answer. It will do this by reasoning about the query, working out what it needs to find out, making the appropriate searches and analysing the results before giving an answer. If that sounds complicated, don’t worry,  it isn’t.</p>
+
+<h3 id="intelligent-wikipedia">Intelligent Wikipedia</h3>
+
+<p>As I said, initially, we’ll use a Jupyter Notebook, so I’ll present the code here as individual notebook cells.</p>
+
+<p>The first cell imports CrewAI and sets up OpenAI.</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">from</span> <span class="n">crewai</span> <span class="kn">import</span> <span class="n">Agent</span><span class="p">,</span> <span class="n">Task</span><span class="p">,</span> <span class="n">Crew</span>
+
+<span class="c1"># Omit the next two lines if OPENAI_API_KEY is already set
+</span><span class="kn">import</span> <span class="n">os</span>
+<span class="n">os</span><span class="p">.</span><span class="n">environ</span><span class="p">[</span><span class="sh">"</span><span class="s">OPENAI_API_KEY</span><span class="sh">"</span><span class="p">]</span> <span class="o">=</span> <span class="sh">"</span><span class="s">your key here</span><span class="sh">"</span>
+
+<span class="n">llm</span> <span class="o">=</span> <span class="sh">"</span><span class="s">gpt-4o</span><span class="sh">"</span>
+</code></pre></div></div>
+
+<p>CrewAI will find the OpenAI key in the “OPENAI_API_KEY” environment variable, so we set it here. You may have already done this, if so, this code is redundant and you can omit it.</p>
+
+<p>You can use whichever model you wish but “gpt-4o” seems the best option at the time of writing.</p>
+
+<h4 id="tools">Tools</h4>
+
+<p>Now we are going to specify the Wikipedia tool. A tool is a function that a CrewAI agent can call if required - it performs a task and returns a value. The simplest way to define a tool is with a decorator. So, the next cell is:</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">from</span> <span class="n">crewai_tools</span> <span class="kn">import</span> <span class="n">tool</span>
+<span class="kn">import</span> <span class="n">wikipedia</span>
+
+<span class="nd">@tool</span><span class="p">(</span><span class="sh">"</span><span class="s">wikipedia_lookup</span><span class="sh">"</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">wikipedia_lookup</span><span class="p">(</span><span class="n">q</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="sh">"""</span><span class="s">Look up a query in Wikipedia and return the result</span><span class="sh">"""</span>
+    <span class="k">return</span> <span class="n">wikipedia</span><span class="p">.</span><span class="nf">page</span><span class="p">(</span><span class="n">q</span><span class="p">).</span><span class="n">summary</span>
+</code></pre></div></div>
+
+<p>After the imports, we have a simple function that takes a string parameter, sends it to Wikipedia and returns a summary of a Wikipedia page. Note we have included a function description and type hints for the parameter and return value. This helps CrewAI to know how to use the tool.</p>
+
+<p>Now we get to the main part of the application: we define the agent that will do the work for us and the task that we want it to undertake, and then we create and run the <em>crew</em>. This <em>crew</em> combines <em>agents</em> and <em>tasks</em> into something that can be executed. In our first app, that is a single agent and single task but later we will see more complex <em>crews</em>.</p>
+
+<h4 id="agents">Agents</h4>
+
+<p>Let’s first look at the agent. The following code creates an agent variable called <code class="language-plaintext highlighter-rouge">researcher_agent</code>. It specifies a <em>role</em>, a <em>goal</em>, a <em>backstory</em> and a list of tools the agent can use. It also specifies the LLM model to use. So the next cell is:</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Define the agent
+</span><span class="n">researcher_agent</span> <span class="o">=</span> <span class="nc">Agent</span><span class="p">(</span>
+        <span class="n">role</span><span class="o">=</span><span class="sh">"</span><span class="s">Researcher</span><span class="sh">"</span><span class="p">,</span>
+        <span class="n">goal</span><span class="o">=</span><span class="sh">"</span><span class="s">You research topics using Wikipedia and report on the results</span><span class="sh">"</span><span class="p">,</span>
+        <span class="n">backstory</span><span class="o">=</span><span class="sh">"</span><span class="s">You are an experienced writer and editor</span><span class="sh">"</span><span class="p">,</span>
+        <span class="n">tools</span><span class="o">=</span><span class="p">[</span><span class="n">wikipedia_lookup</span><span class="p">],</span>
+        <span class="n">llm</span><span class="o">=</span><span class="n">llm</span>
+    <span class="p">)</span>
+</code></pre></div></div>
+
+<p>Many more attributes can be specified for an Agent but these are the basic ones.  The LLM and tools are fairly obvious, they are things you want to be specific about. But one might be forgiven for thinking that <em>role</em>, goal and <em>backstory</em> are more like magical incantations rather than programming requirements. However, as you might expect, these strings are used when CrewAI constructs prompts for the LLM.</p>
+
+<p>So that’s an Agent: some stuff that tells the LLM its purpose, a list of tools and an LLM model.</p>
+
+<h4 id="tasks">Tasks</h4>
+
+<p>Next up is the <em>task</em>. The <em>task</em> tells us what the <em>agent</em> has to do and, for our purposes, it will involve responding to a query. When we get around to creating a proper app we will prompt the user for a query, but this is a prototype Jupyter Notebook so to make things easier we will hard code the query.</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">query</span> <span class="o">=</span> <span class="sh">"</span><span class="s">What is the EU</span><span class="sh">'</span><span class="s">s largest city</span><span class="sh">"</span>
+</code></pre></div></div>
+
+<p>That is not a question that can be answered directly from a Wikipedia page - some reasoning will be required.</p>
+
+<p>And here is the task specification that will incorporate this query.</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">task1</span> <span class="o">=</span> <span class="nc">Task</span><span class="p">(</span>
+    <span class="n">description</span><span class="o">=</span><span class="n">query</span><span class="p">,</span>
+    <span class="n">expected_output</span><span class="o">=</span><span class="sh">'</span><span class="s">A short text based on the tool output.</span><span class="sh">'</span><span class="p">,</span>
+    <span class="n">agent</span><span class="o">=</span><span class="n">researcher_agent</span><span class="p">,</span>
+    <span class="n">tools</span><span class="o">=</span><span class="p">[</span><span class="n">wikipedia_lookup</span><span class="p">]</span>
+<span class="p">)</span>
+</code></pre></div></div>
+
+<p>The description of the task is the query, we explain what the expected output will be (this is another magical string that will end up in a prompt), we associate the task with an agent and we list the tools that may be used.</p>
+
+<p>Now we tie it all together with a <em>crew</em>.</p>
+
+<h4 id="crews">Crews</h4>
+
+<p>Crews tell us which agents are required to do which tasks. Here is the <em>crew</em> for this app.</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Define the crew
+</span><span class="n">crew</span> <span class="o">=</span> <span class="nc">Crew</span><span class="p">(</span>
+    <span class="n">agents</span><span class="o">=</span><span class="p">[</span><span class="n">researcher_agent</span><span class="p">],</span>
+    <span class="n">tasks</span><span class="o">=</span><span class="p">[</span><span class="n">task1</span><span class="p">],</span>
+    <span class="n">verbose</span><span class="o">=</span><span class="bp">True</span>
+<span class="p">)</span>
+</code></pre></div></div>
+
+<p>It comprises a list of agents and a list of tasks. In this case, one task and one agent. When the <code class="language-plaintext highlighter-rouge">verbose </code>flag is set, CrewAI will show its working - we’ll see that shortly.</p>
+
+<p>Now all we need to do is run the whole thing and look at the results.</p>
+
+<h4 id="execute-the-crew">Execute the crew</h4>
+
+<p>If that sounds a bit harsh before we even know what the result is, let me be clear I mean we need to run the code that the crew represents (no capital punishment is involved no matter how bad the response is).</p>
+
+<p>In CrewAI terms, we <code class="language-plaintext highlighter-rouge">kickoff</code> the crew and then get the response in the return value. Here’s the next cell.</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">result</span> <span class="o">=</span> <span class="n">crew</span><span class="p">.</span><span class="nf">kickoff</span><span class="p">()</span>
+
+<span class="c1"># Accessing the task output
+</span><span class="n">task_output</span> <span class="o">=</span> <span class="n">task1</span><span class="p">.</span><span class="n">output</span>
+
+<span class="nf">print</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="s">Task Description: </span><span class="si">{</span><span class="n">task_output</span><span class="p">.</span><span class="n">description</span><span class="si">}</span><span class="sh">"</span><span class="p">)</span>
+<span class="nf">print</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="s">Task Summary: </span><span class="si">{</span><span class="n">task_output</span><span class="p">.</span><span class="n">summary</span><span class="si">}</span><span class="sh">"</span><span class="p">)</span>
+<span class="nf">print</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="s">Raw Output: </span><span class="si">{</span><span class="n">task_output</span><span class="p">.</span><span class="n">raw</span><span class="si">}</span><span class="sh">"</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>As you can see we call the <code class="language-plaintext highlighter-rouge">kickoff</code> method and then print out the various outputs that have been generated.</p>
+
+<p>Now, if we run the complete notebook, the result of those print statements are:</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Task Description: What is the EU's largest city
+
+Task Summary: What is the EU's largest city...
+
+Raw Output: Berlin is the largest city in the European Union in terms of 
+population within city administrative boundaries.
+</code></pre></div></div>
+
+<p>This is a good and correct response.</p>
+
+<p>What is possibly more interesting is the way that the crew managed to get to the solution. Remember we set the <code class="language-plaintext highlighter-rouge">verbose </code>attribute to <code class="language-plaintext highlighter-rouge">True</code>. This means that the ‘thinking’ that the agent does is recorded and displayed as the notebook is run. You can see this below.</p>
+
+<div class="language-markdown highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="gh"># Agent: Researcher</span>
+<span class="gu">## Task: What is the EU's largest city</span>
+
+<span class="gh"># Agent: Researcher</span>
+<span class="gu">## Thought: I need to look up information about the largest city in the European Union (EU).</span>
+<span class="gu">## Using tool: wikipedia_lookup</span>
+<span class="gu">## Tool Input: </span>
+{
+  "q": "Largest city in the European Union"
+}
+<span class="gu">## Tool Output: </span>
+This is a list of the largest cities in the European Union according to 
+the population within their city boundary. The cities listed all have 
+populations over 300,000. The list deals exclusively with the areas 
+within city administrative boundaries as opposed to urban areas or 
+larger urban zones (metropolitan areas), which are generally larger in 
+terms of population than the main city (although they can also be 
+smaller, in some of the cases presented).
+As some cities have a very narrow boundary and others a very wide one, 
+the list may not give an accurate view of the comparative magnitude of 
+entire urban areas, and thus the figures in the list should be treated 
+with caution. For example Paris is the most populous urban area in the 
+European Union; however, the city proper of the French capital has a 
+lower population than top-ranked Berlin and a couple of other cities, 
+as shown in the table. Likewise the City of Brussels is only one of a 
+total of 19 municipalities making up the greater Brussels Capital Region, 
+and by itself does not reach the population threshold to be listed here. 
+On the other hand, the Municipality of Sintra, listed on the table as the 
+second most populous Portuguese city includes in it the cities of 
+Agualva-Cacém and Queluz, in addition to the town of Sintra and other 
+urban centers.
+
+<span class="gh"># Agent: Researcher</span>
+<span class="gu">## Final Answer: </span>
+Berlin is the largest city in the European Union in terms of population 
+within city administrative boundaries.
+</code></pre></div></div>
+
+<p>You can see that CrewAI follows a very agent-like process. It reasons about its response, gathers the appropriate information and then responds with a suitable answer.</p>
+
+<h4 id="lets-make-an-app">Let’s make an app</h4>
+
+<p>Turning this into an app is easy. We can add a plain Python front end or a prettier GUI using Streamlit or Taipy. Here’s the plain Python version.</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">from</span> <span class="n">crewai</span> <span class="kn">import</span> <span class="n">Agent</span><span class="p">,</span> <span class="n">Task</span><span class="p">,</span> <span class="n">Crew</span>
+
+<span class="kn">import</span> <span class="n">os</span>
+<span class="n">os</span><span class="p">.</span><span class="n">environ</span><span class="p">[</span><span class="sh">"</span><span class="s">OPENAI_API_KEY</span><span class="sh">"</span><span class="p">]</span> <span class="o">=</span> <span class="sh">"</span><span class="s">your api key</span><span class="sh">"</span>
+<span class="n">llm</span> <span class="o">=</span> <span class="sh">"</span><span class="s">gpt-4o</span><span class="sh">"</span>
+
+<span class="c1"># Create the wikipedia tool
+</span><span class="kn">from</span> <span class="n">crewai_tools</span> <span class="kn">import</span> <span class="n">tool</span>
+<span class="kn">import</span> <span class="n">wikipedia</span>
+
+<span class="nd">@tool</span><span class="p">(</span><span class="sh">"</span><span class="s">wikipedia_lookup</span><span class="sh">"</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">wikipedia_lookup</span><span class="p">(</span><span class="n">q</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="sh">"</span><span class="s">Look up a query in Wikipedia and return a summary</span><span class="sh">"</span>
+    <span class="k">return</span> <span class="n">wikipedia</span><span class="p">.</span><span class="nf">page</span><span class="p">(</span><span class="n">q</span><span class="p">).</span><span class="n">summary</span>
+
+<span class="c1"># Define the agent
+</span><span class="n">intelligent_wikipedia</span> <span class="o">=</span> <span class="nc">Agent</span><span class="p">(</span>
+        <span class="n">role</span><span class="o">=</span><span class="sh">"</span><span class="s">Researcher</span><span class="sh">"</span><span class="p">,</span>
+        <span class="n">goal</span><span class="o">=</span><span class="sh">"</span><span class="s">You research topics using Wikipedia and report on the results</span><span class="sh">"</span><span class="p">,</span>
+        <span class="n">backstory</span><span class="o">=</span><span class="sh">"</span><span class="s">You are an experienced writer and editor</span><span class="sh">"</span><span class="p">,</span>
+        <span class="n">tools</span><span class="o">=</span><span class="p">[</span><span class="n">wikipedia_lookup</span><span class="p">],</span>
+        <span class="n">llm</span><span class="o">=</span><span class="n">llm</span>
+    <span class="p">)</span>
+
+<span class="c1"># The run function sets the task and executes the crew
+# and returns the result
+</span><span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="n">s</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+    <span class="n">task</span> <span class="o">=</span> <span class="nc">Task</span><span class="p">(</span>
+        <span class="n">description</span><span class="o">=</span><span class="n">s</span><span class="p">,</span>
+        <span class="n">expected_output</span><span class="o">=</span><span class="sh">'</span><span class="s">A short text based on the tool output</span><span class="sh">'</span><span class="p">,</span>
+        <span class="n">agent</span><span class="o">=</span><span class="n">intelligent_wikipedia</span><span class="p">,</span>
+        <span class="n">tools</span><span class="o">=</span><span class="p">[</span><span class="n">wikipedia_lookup</span><span class="p">]</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Define the crew
+</span>    <span class="n">crew</span> <span class="o">=</span> <span class="nc">Crew</span><span class="p">(</span>
+        <span class="n">agents</span><span class="o">=</span><span class="p">[</span><span class="n">intelligent_wikipedia</span><span class="p">],</span>
+        <span class="n">tasks</span><span class="o">=</span><span class="p">[</span><span class="n">task</span><span class="p">],</span>
+        <span class="n">verbose</span><span class="o">=</span><span class="bp">True</span>
+    <span class="p">)</span>
+
+    <span class="n">result</span> <span class="o">=</span> <span class="n">crew</span><span class="p">.</span><span class="nf">kickoff</span><span class="p">()</span>
+    <span class="n">task_output</span> <span class="o">=</span> <span class="n">task</span><span class="p">.</span><span class="n">output</span>
+    <span class="k">return</span> <span class="n">task_output</span><span class="p">.</span><span class="n">raw</span>
+
+<span class="c1">###############################
+</span>
+<span class="nf">print</span><span class="p">(</span><span class="sh">"</span><span class="s">Intelligent Wikipedia</span><span class="sh">"</span><span class="p">)</span>
+
+<span class="n">q</span> <span class="o">=</span> <span class="nf">input</span><span class="p">(</span><span class="sh">"</span><span class="s">Enter your question: </span><span class="sh">"</span><span class="p">)</span> 
+<span class="n">answer</span> <span class="o">=</span> <span class="nf">run</span><span class="p">(</span><span class="n">q</span><span class="p">)</span>
+<span class="nf">print</span><span class="p">(</span><span class="n">answer</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>All of the cells from the Notebook have been concatenated and the task, crew and kickoff functionality have been incorporated into a function run.</p>
+
+<p>Below the comment line, we print a title, prompt for a query,  call the run function, and print out the response.</p>
+
+<p>If you prefer a more sophisticated GUI using Streamlit or Taipy then replace the code below the comment line with something like one of the following:</p>
+
+<p>Streamlit:</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="n">streamlit</span> <span class="k">as</span> <span class="n">st</span>
+
+<span class="n">st</span><span class="p">.</span><span class="nf">header</span><span class="p">(</span><span class="sh">"</span><span class="s">Intelligent Wikipedia</span><span class="sh">"</span><span class="p">)</span>
+
+<span class="k">if</span> <span class="n">q</span> <span class="p">:</span><span class="o">=</span> <span class="n">st</span><span class="p">.</span><span class="nf">text_input</span><span class="p">(</span><span class="sh">"</span><span class="s">Enter your question</span><span class="sh">"</span><span class="p">):</span>
+    <span class="n">answer</span> <span class="o">=</span> <span class="nf">run</span><span class="p">(</span><span class="n">q</span><span class="p">)</span>
+    <span class="n">st</span><span class="p">.</span><span class="nf">markdown</span><span class="p">(</span> <span class="n">answer</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>Taipy:</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">from</span> <span class="n">taipy.gui</span> <span class="kn">import</span> <span class="n">Gui</span>
+<span class="kn">import</span> <span class="n">taipy.gui.builder</span> <span class="k">as</span> <span class="n">tgb</span>
+
+<span class="n">user_input</span> <span class="o">=</span> <span class="sh">""</span>
+<span class="n">result</span> <span class="o">=</span> <span class="sh">""</span>
+
+<span class="k">def</span> <span class="nf">input_change</span><span class="p">(</span><span class="n">state</span><span class="p">):</span>
+    <span class="n">answer</span> <span class="o">=</span> <span class="nf">run</span><span class="p">(</span><span class="n">state</span><span class="p">.</span><span class="n">user_input</span><span class="p">)</span>
+    <span class="n">state</span><span class="p">.</span><span class="n">result</span> <span class="o">=</span> <span class="n">answer</span>
+
+<span class="k">with</span> <span class="n">tgb</span><span class="p">.</span><span class="nc">Page</span><span class="p">()</span> <span class="k">as</span> <span class="n">page</span><span class="p">:</span>
+    <span class="n">tgb</span><span class="p">.</span><span class="nf">text</span><span class="p">(</span><span class="sh">"</span><span class="s"># Intelligent Wikipedia</span><span class="sh">"</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="sh">'</span><span class="s">md</span><span class="sh">'</span><span class="p">)</span>
+
+    <span class="k">with</span> <span class="n">tgb</span><span class="p">.</span><span class="nf">layout</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="sh">"</span><span class="s">1 1</span><span class="sh">"</span><span class="p">):</span>
+        <span class="k">with</span> <span class="n">tgb</span><span class="p">.</span><span class="nf">part</span><span class="p">():</span>
+            <span class="n">tgb</span><span class="p">.</span><span class="nf">text</span><span class="p">(</span><span class="sh">"</span><span class="s">Enter your question in the box</span><span class="sh">"</span><span class="p">)</span>
+            <span class="n">tgb</span><span class="p">.</span><span class="nf">input</span><span class="p">(</span><span class="sh">"</span><span class="s">{user_input}</span><span class="sh">"</span><span class="p">,</span> <span class="n">multiline</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">class_name</span><span class="o">=</span><span class="sh">"</span><span class="s">fullwidth</span><span class="sh">"</span><span class="p">)</span>
+            <span class="n">tgb</span><span class="p">.</span><span class="nf">button</span><span class="p">(</span><span class="sh">"</span><span class="s">Submit</span><span class="sh">"</span><span class="p">,</span> <span class="n">on_action</span><span class="o">=</span><span class="n">input_change</span><span class="p">)</span>
+        <span class="k">with</span> <span class="n">tgb</span><span class="p">.</span><span class="nf">part</span><span class="p">():</span>
+            <span class="n">tgb</span><span class="p">.</span><span class="nf">text</span><span class="p">(</span><span class="sh">"</span><span class="s">Intellligent Wikipedia</span><span class="sh">'</span><span class="s">s response will appear below:</span><span class="sh">"</span><span class="p">)</span>
+            <span class="n">tgb</span><span class="p">.</span><span class="nf">text</span><span class="p">(</span><span class="sh">"</span><span class="s">{result}</span><span class="sh">"</span><span class="p">)</span>
+
+
+<span class="nc">Gui</span><span class="p">(</span><span class="n">page</span><span class="o">=</span><span class="n">page</span><span class="p">).</span><span class="nf">run</span><span class="p">(</span><span class="n">dark_mode</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>Here is a screenshot of the Streamlit version</p>
+
+<p><img src="/assets/images/agentpipeline/Streamlit.png" alt="" /></p>
+
+<p>You don’t see the reasoning in the GUI version of the app as this is sent to the console. So you should see it on the command line where you invoked the app. If you don’t want this, the set <code class="language-plaintext highlighter-rouge">verbose = False</code> in the crew definition.</p>
+
+<h3 id="wikipedia-for-kids---a-pipeline-app">Wikipedia for kids - a pipeline app</h3>
+
+<p>To create a pipeline we define more agents and more tasks, and then create a crew that will join them in a sensible way.</p>
+
+<p>The new app will build on the previous one. It’s called Wikipedia for Kids and again looks something up in Wikipedia but then translates it into a text suitable for young readers and shortens it to a few hundred words.</p>
+
+<p>Let’s take a look at the code for the agents.</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">researcher_agent</span> <span class="o">=</span> <span class="nc">Agent</span><span class="p">(</span>
+        <span class="n">role</span><span class="o">=</span><span class="sh">"</span><span class="s">Researcher</span><span class="sh">"</span><span class="p">,</span>
+        <span class="n">goal</span><span class="o">=</span><span class="sh">"</span><span class="s">You research topics using Wikipedia and report on the results</span><span class="sh">"</span><span class="p">,</span>
+        <span class="n">backstory</span><span class="o">=</span><span class="sh">"</span><span class="s">You are an experienced writer and editor</span><span class="sh">"</span><span class="p">,</span>
+        <span class="n">tools</span><span class="o">=</span><span class="p">[</span><span class="n">wikipedia_lookup</span><span class="p">],</span>
+        <span class="n">llm</span><span class="o">=</span><span class="n">llm</span>
+    <span class="p">)</span>
+<span class="n">writer_agent</span> <span class="o">=</span> <span class="nc">Agent</span><span class="p">(</span>
+        <span class="n">role</span><span class="o">=</span><span class="sh">"</span><span class="s">Writer</span><span class="sh">"</span><span class="p">,</span>
+        <span class="n">goal</span><span class="o">=</span><span class="sh">"</span><span class="s">You re-write articles so that they are suitable for young readers</span><span class="sh">"</span><span class="p">,</span>
+        <span class="n">backstory</span><span class="o">=</span><span class="sh">"</span><span class="s">You are an experienced writer and editor</span><span class="sh">"</span><span class="p">,</span>
+        <span class="n">llm</span><span class="o">=</span><span class="n">llm</span>
+    <span class="p">)</span>
+<span class="n">editor_agent</span> <span class="o">=</span> <span class="nc">Agent</span><span class="p">(</span>
+        <span class="n">role</span><span class="o">=</span><span class="sh">"</span><span class="s">Editor</span><span class="sh">"</span><span class="p">,</span>
+        <span class="n">goal</span><span class="o">=</span><span class="sh">"</span><span class="s">You ensure that the text you are given is grammatically correct and the correct length</span><span class="sh">"</span><span class="p">,</span>
+        <span class="n">backstory</span><span class="o">=</span><span class="sh">"</span><span class="s">You are an experienced writer and editor</span><span class="sh">"</span><span class="p">,</span>
+        <span class="n">llm</span><span class="o">=</span><span class="n">llm</span>
+    <span class="p">)</span>
+</code></pre></div></div>
+
+<p>You can see that we now have three agents. The second two are the <code class="language-plaintext highlighter-rouge">writer_agent</code>and the <code class="language-plaintext highlighter-rouge">editor_agent</code>.  The <code class="language-plaintext highlighter-rouge">goal</code> strings tell you their purpose and, while they also require a LLM, they don’t need to use the Wikipedia tool.</p>
+
+<p>Having the agents is fine but we need to specify what tasks they need to perform. Here is the code cell for the tasks.</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">task1</span> <span class="o">=</span> <span class="nc">Task</span><span class="p">(</span>
+    <span class="n">description</span><span class="o">=</span><span class="n">query</span><span class="p">,</span>
+    <span class="n">expected_output</span><span class="o">=</span><span class="sh">'</span><span class="s">A short text based on the tool output</span><span class="sh">'</span><span class="p">,</span>
+    <span class="n">agent</span><span class="o">=</span><span class="n">researcher_agent</span><span class="p">,</span>
+    <span class="n">tools</span><span class="o">=</span><span class="p">[</span><span class="n">wikipedia_lookup</span><span class="p">]</span>
+<span class="p">)</span>
+<span class="n">task2</span> <span class="o">=</span> <span class="nc">Task</span><span class="p">(</span>
+    <span class="n">description</span><span class="o">=</span><span class="sh">"</span><span class="s">Rework the text to be suitable for a 10-year-old reader</span><span class="sh">"</span><span class="p">,</span>
+    <span class="n">expected_output</span><span class="o">=</span><span class="sh">'</span><span class="s">A short text based on the tool output</span><span class="sh">'</span><span class="p">,</span>
+    <span class="n">agent</span><span class="o">=</span><span class="n">writer_agent</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">task3</span> <span class="o">=</span> <span class="nc">Task</span><span class="p">(</span>
+    <span class="n">description</span><span class="o">=</span><span class="sh">"</span><span class="s">Edit the text to ensure that it is grammatically correct and no more than 500 words</span><span class="sh">"</span><span class="p">,</span>
+    <span class="n">expected_output</span><span class="o">=</span><span class="sh">'</span><span class="s">A short text based on the tool output</span><span class="sh">'</span><span class="p">,</span>
+    <span class="n">agent</span><span class="o">=</span><span class="n">editor_agent</span><span class="p">,</span>
+<span class="p">)</span>
+</code></pre></div></div>
+
+<p>The first task is as before but the second and third ones tell the agents to change the original text into something suitable for a 10-year-old reader and to make sure that it is grammatically correct and that it is not longer than 500 words. Note that the appropriate agents are specified in each task and that the Wikipedia tool is only required for the first task.</p>
+
+<p>Now we need to create a crew and run it. Here’s the code for that.</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Define the crew
+</span><span class="n">crew</span> <span class="o">=</span> <span class="nc">Crew</span><span class="p">(</span>
+    <span class="n">agents</span><span class="o">=</span><span class="p">[</span><span class="n">researcher_agent</span><span class="p">,</span> <span class="n">writer_agent</span><span class="p">,</span> <span class="n">editor_agent</span><span class="p">],</span>
+    <span class="n">tasks</span><span class="o">=</span><span class="p">[</span><span class="n">task1</span><span class="p">,</span> <span class="n">task2</span><span class="p">,</span> <span class="n">task3</span><span class="p">],</span>
+    <span class="n">verbose</span><span class="o">=</span><span class="bp">True</span>
+<span class="p">)</span>
+
+<span class="n">result</span> <span class="o">=</span> <span class="n">crew</span><span class="p">.</span><span class="nf">kickoff</span><span class="p">()</span>
+
+<span class="nf">print</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="s">Raw Output: </span><span class="si">{</span><span class="n">result</span><span class="p">.</span><span class="n">raw</span><span class="si">}</span><span class="sh">"</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>To define the crew, we simply list the agents and the tasks in the order in which they need to be executed. Note that there is a minor change in the way the result is retrieved. We don’t use the output from a task but rather from the final result.</p>
+
+<p>The prompt, this time was simply <code class="language-plaintext highlighter-rouge">"Paris"</code> and as you can see our pipeline of agents has done a good job of telling a youngster about Paris in a few hundred words. Below is a screenshot of the Streamlit version of the app.</p>
+
+<p><img src="/assets/images/agentpipeline/Streamlit2.png" alt="" /></p>
+
+<p>Below is the complete code for the Streamlit app.</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">from</span> <span class="n">crewai</span> <span class="kn">import</span> <span class="n">Agent</span><span class="p">,</span> <span class="n">Task</span><span class="p">,</span> <span class="n">Crew</span>
+
+<span class="kn">import</span> <span class="n">os</span>
+<span class="c1"># OpenAI
+</span><span class="n">os</span><span class="p">.</span><span class="n">environ</span><span class="p">[</span><span class="sh">"</span><span class="s">OPENAI_API_KEY</span><span class="sh">"</span><span class="p">]</span> <span class="o">=</span> <span class="sh">"</span><span class="s">your API key</span><span class="sh">"</span>
+<span class="n">llm</span> <span class="o">=</span> <span class="sh">"</span><span class="s">gpt-4o</span><span class="sh">"</span>
+
+<span class="c1"># Create the wikipedia tool
+</span><span class="kn">from</span> <span class="n">crewai_tools</span> <span class="kn">import</span> <span class="n">tool</span>
+<span class="kn">import</span> <span class="n">wikipedia</span>
+
+<span class="nd">@tool</span><span class="p">(</span><span class="sh">"</span><span class="s">wikipedia_lookup</span><span class="sh">"</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">wikipedia_lookup</span><span class="p">(</span><span class="n">q</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="sh">"</span><span class="s">Look up a query in Wikipedia and return a summary</span><span class="sh">"</span>
+    <span class="k">return</span> <span class="n">wikipedia</span><span class="p">.</span><span class="nf">page</span><span class="p">(</span><span class="n">q</span><span class="p">).</span><span class="n">summary</span>
+
+<span class="c1"># Define the agents
+</span><span class="n">researcher_agent</span> <span class="o">=</span> <span class="nc">Agent</span><span class="p">(</span>
+        <span class="n">role</span><span class="o">=</span><span class="sh">"</span><span class="s">Researcher</span><span class="sh">"</span><span class="p">,</span>
+        <span class="n">goal</span><span class="o">=</span><span class="sh">"</span><span class="s">You research topics using Wikipedia and report on the results</span><span class="sh">"</span><span class="p">,</span>
+        <span class="n">backstory</span><span class="o">=</span><span class="sh">"</span><span class="s">You are an experienced writer and editor</span><span class="sh">"</span><span class="p">,</span>
+        <span class="n">tools</span><span class="o">=</span><span class="p">[</span><span class="n">wikipedia_lookup</span><span class="p">],</span>
+        <span class="n">llm</span><span class="o">=</span><span class="n">llm</span>
+    <span class="p">)</span>
+<span class="n">writer_agent</span> <span class="o">=</span> <span class="nc">Agent</span><span class="p">(</span>
+        <span class="n">role</span><span class="o">=</span><span class="sh">"</span><span class="s">Writer</span><span class="sh">"</span><span class="p">,</span>
+        <span class="n">goal</span><span class="o">=</span><span class="sh">"</span><span class="s">You re-write articles so that they are suitable for young readers</span><span class="sh">"</span><span class="p">,</span>
+        <span class="n">backstory</span><span class="o">=</span><span class="sh">"</span><span class="s">You are an experienced writer and editor</span><span class="sh">"</span><span class="p">,</span>
+        <span class="n">llm</span><span class="o">=</span><span class="n">llm</span>
+
+    <span class="p">)</span>
+<span class="n">editor_agent</span> <span class="o">=</span> <span class="nc">Agent</span><span class="p">(</span>
+        <span class="n">role</span><span class="o">=</span><span class="sh">"</span><span class="s">Editor</span><span class="sh">"</span><span class="p">,</span>
+        <span class="n">goal</span><span class="o">=</span><span class="sh">"</span><span class="s">You ensure that the text you are given is grammatically correct and the correct length</span><span class="sh">"</span><span class="p">,</span>
+        <span class="n">backstory</span><span class="o">=</span><span class="sh">"</span><span class="s">You are an experienced writer and editor</span><span class="sh">"</span><span class="p">,</span>
+        <span class="n">llm</span><span class="o">=</span><span class="n">llm</span>
+    <span class="p">)</span>
+
+<span class="c1"># The run function sets the task and executes the crew
+# and returns the result
+</span><span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="n">s</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+    <span class="n">task1</span> <span class="o">=</span> <span class="nc">Task</span><span class="p">(</span>
+        <span class="n">description</span><span class="o">=</span><span class="n">q</span><span class="p">,</span>
+        <span class="n">expected_output</span><span class="o">=</span><span class="sh">'</span><span class="s">A short text based on the tool output</span><span class="sh">'</span><span class="p">,</span>
+        <span class="n">agent</span><span class="o">=</span><span class="n">researcher_agent</span><span class="p">,</span>
+        <span class="n">tools</span><span class="o">=</span><span class="p">[</span><span class="n">wikipedia_lookup</span><span class="p">]</span>
+    <span class="p">)</span>
+    <span class="n">task2</span> <span class="o">=</span> <span class="nc">Task</span><span class="p">(</span>
+        <span class="n">description</span><span class="o">=</span><span class="sh">"</span><span class="s">Rework the text to be suitable for a 10-year-old reader</span><span class="sh">"</span><span class="p">,</span>
+        <span class="n">expected_output</span><span class="o">=</span><span class="sh">'</span><span class="s">A short text based on the tool output</span><span class="sh">'</span><span class="p">,</span>
+        <span class="n">agent</span><span class="o">=</span><span class="n">writer_agent</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">task3</span> <span class="o">=</span> <span class="nc">Task</span><span class="p">(</span>
+        <span class="n">description</span><span class="o">=</span><span class="sh">"</span><span class="s">Edit the text to ensure that it is grammatically correct and no more than 500 words</span><span class="sh">"</span><span class="p">,</span>
+        <span class="n">expected_output</span><span class="o">=</span><span class="sh">'</span><span class="s">A short text based on the tool output</span><span class="sh">'</span><span class="p">,</span>
+        <span class="n">agent</span><span class="o">=</span><span class="n">editor_agent</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Define the crew
+</span>    <span class="n">crew</span> <span class="o">=</span> <span class="nc">Crew</span><span class="p">(</span>
+        <span class="n">agents</span><span class="o">=</span><span class="p">[</span><span class="n">researcher_agent</span><span class="p">,</span> <span class="n">writer_agent</span><span class="p">,</span> <span class="n">editor_agent</span><span class="p">],</span>
+        <span class="n">tasks</span><span class="o">=</span><span class="p">[</span><span class="n">task1</span><span class="p">,</span> <span class="n">task2</span><span class="p">,</span> <span class="n">task3</span><span class="p">],</span>
+        <span class="n">verbose</span><span class="o">=</span><span class="bp">True</span>
+    <span class="p">)</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">crew</span><span class="p">.</span><span class="nf">kickoff</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">result</span><span class="p">.</span><span class="n">raw</span>    
+<span class="c1">###############################
+</span>
+<span class="kn">import</span> <span class="n">streamlit</span> <span class="k">as</span> <span class="n">st</span>
+
+<span class="n">st</span><span class="p">.</span><span class="nf">header</span><span class="p">(</span><span class="sh">"</span><span class="s">Wikipedia for kids</span><span class="sh">"</span><span class="p">)</span>
+
+<span class="k">if</span> <span class="n">q</span> <span class="p">:</span><span class="o">=</span> <span class="n">st</span><span class="p">.</span><span class="nf">text_input</span><span class="p">(</span><span class="sh">"</span><span class="s">Enter your question</span><span class="sh">"</span><span class="p">):</span>
+    <span class="n">answer</span> <span class="o">=</span> <span class="nf">run</span><span class="p">(</span><span class="n">q</span><span class="p">)</span>
+    <span class="nf">print</span><span class="p">(</span><span class="n">answer</span><span class="p">)</span>
+    <span class="n">st</span><span class="p">.</span><span class="nf">markdown</span><span class="p">(</span> <span class="n">answer</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>And there we have the two example apps. They do similar things and both use the same Wikipedia lookup tool. The second one adds a couple of extra functions to the pipeline, changing the text to be more suitable for a young reader and limiting the length of the text.</p>
+
+<p>What can we conclude from this exercise?</p>
+
+<h3 id="conclusion-ai-agents-vs-ai-pipelines-in-llm-applications">Conclusion: AI Agents vs. AI Pipelines in LLM Applications</h3>
+
+<p>The two approaches differ in how they handle tasks, decision-making, and interaction.</p>
+
+<p><strong>Agents</strong> are autonomous, can make decisions and are potentially interactive. In this approach, the LLM acts as an “agent” capable of understanding potentially complex user prompts and adapting its behaviour to achieve specific goals. Examples of use include conversational virtual assistants (as in the app we’ve seen) or autonomous customer service agents.</p>
+
+<p>Agents can handle open-ended tasks and maintain context over time, making them ideal for complex, interactive applications.</p>
+
+<p><strong>AI Pipelines</strong>, in contrast, follow a linear, deterministic process with predefined stages for tasks such as data processing. Pipelines are structured and good for applications that involve repetitive, well-defined tasks such as text classification, document processing or data transformation.</p>
+
+<p>AI pipelines are modular, scalable, and, because they typically consist of well-defined tasks, are more predictable than the more open-ended behaviour of agents.</p>
+
+<p>Agents could be designed to mimic pipelines by structuring their prompts as a sequence of tasks but the result may be less predictable or consistent, so where a pipeline can be used, that may be the better approach.</p>
+
+<hr />
+
+<p>I hope that you have found this an interesting topic and that the code is useful to you. If you would like to see more of my articles, please visit my <a href="alanjones2.github.io">web page</a> and/or subscribe to my occasional, free <a href="technofile.substack.com">newsletter</a>. If you are a Medium member, you can find most of my stuff <a href="https://medium.com/@alan-jones">there</a>, too.</p>
+
+      </div>
+    </div>
+    <div class="col-sm-3">
+      Sponsored content
+    <!--ads etc here -->
+    <!-- streamlit from scratch-->
+    <div class="p-4 shadow-sm mb-4 rounded border border-secondary bg-light">
+        <div>
+            <i>eBook</i>
+            <img class="mr-3" src="" width='80%' height='auto' alt="">
+            <h5>
+                <a href="https://alanjones2.github.io/streamlitfromscratch/" target="_blank">
+                    <span class="text-dark">Streamlitfrom Scratch</span>
+                </a>
+            </h5>
+            <p><b>Streamlit</b> is a framework for creating Data Science apps in Python.
+                <br />
+                <b>Streamlit from Scratch</b> is an ebook that will teach you how to get started with
+                Streamlit.
+            </p>
+
+        </div>
+    </div>
+
+    <!-- google add start-->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3208991186670959"
+        crossorigin="anonymous"></script>
+    <!-- sfs vertical -->
+    <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3208991186670959" data-ad-slot="6617299104"
+        data-ad-format="auto" data-full-width-responsive="true"></ins>
+    <script>
+        (adsbygoogle = window.adsbygoogle || []).push({});
+    </script>
+    <!-- google add end-->
+
+
+    <!-- how charts work-->
+    <div class="p-4 shadow-sm mb-4 rounded border border-secondary bg-light">
+        <div>
+            <i>Sponsored content</i>
+            <img class="mr-3" src="https://m.media-amazon.com/images/I/61y5lxsc9DL._SY466_.jpg" width='80%'
+                height='auto' alt="">
+            <h5 class="mt-0">
+                <a href="https://amzn.to/47FKuiz" target="_blank">
+                    <span class="text-dark">How Charts Work: Understand and explain data with
+                        confidence</span>
+                </a>
+            </h5>
+            <h6>From the Back Cover</h6>
+            <p>
+                How Charts Work brings the secrets of effective data visualisation in a way that will
+                help you bring data alive.
+                Charts, graphs and tables are essential devices in business, but all too often they
+                present information poorly.
+                This
+                book will help you:
+
+                <li>Feel confident understanding different types of charts, graphs and tables – and how
+                    to read them</li>
+                <li>Recognise the true story behind the data presented and what the information really
+                    shows</li>
+                <li>Know the principles and rules of how best to represent information so you can create
+                    your own
+                    information-driven (and
+                    beautiful) visuals</li>
+                <li>Design visuals that people engage with, understand and act upon</li>
+            </p>
+
+        </div>
+    </div>
+    <!-- google add start-->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3208991186670959"
+        crossorigin="anonymous"></script>
+    <!-- sfs vertical -->
+    <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3208991186670959" data-ad-slot="6617299104"
+        data-ad-format="auto" data-full-width-responsive="true"></ins>
+    <script>
+        (adsbygoogle = window.adsbygoogle || []).push({});
+    </script>
+    <!-- google add end-->
+
+    <!-- the art of statistics-->
+    <div class="p-4 shadow-sm mb-4 rounded border border-secondary bg-light">
+        <div>
+            <i>Sponsored content</i>
+            <img class="mr-3" src="https://m.media-amazon.com/images/I/61eFjiH7sIL._SY264_BO1,204,203,200_QL40_ML2_.jpg"
+                width='80%' height='auto' alt="">
+            <h5 class="mt-0">
+                <a href="https://amzn.to/3kVBGmo" target="_blank">
+                    <span class="text-dark">The Art of Statistics: How to Learn from Data</span>
+                </a>
+            </h5>
+            Discover how data literacy is changing the world and gives you a better understanding of
+            life's biggest problems. I have used this book in various articles and found it to be
+            invaluable.
+
+        </div>
+    </div>
+
+    <!-- google add start-->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3208991186670959"
+        crossorigin="anonymous"></script>
+    <!-- sfs vertical -->
+    <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3208991186670959" data-ad-slot="6617299104"
+        data-ad-format="auto" data-full-width-responsive="true"></ins>
+    <script>
+        (adsbygoogle = window.adsbygoogle || []).push({});
+    </script>
+    <!-- google add end-->
+
+    <div class="p-4 shadow-sm mb-4 rounded border border-secondary bg-light">
+
+        <i>eBook</i>
+        <h5><a href='https://alanjones.gumroad.com/l/auiws' target='_blank'>Plotting with Pandas</a>
+        </h5>
+        <p>
+            <b>Plotting with Pandas: an Introduction to Data Visualization</b> is an ebook that covers basic and
+            statistical plots using Python and Pandas, line and bar charts, scatter plots, pie charts,
+            histograms, box plots, etc.
+        </p>
+
+
+
+    </div>
+
+    <!-- google add start-->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3208991186670959"
+        crossorigin="anonymous"></script>
+    <!-- sfs vertical -->
+    <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3208991186670959" data-ad-slot="6617299104"
+        data-ad-format="auto" data-full-width-responsive="true"></ins>
+    <script>
+        (adsbygoogle = window.adsbygoogle || []).push({});
+    </script>
+    <!-- google add end-->
+
+    <!-- storytelling in data-->
+    <div class="p-4 shadow-sm mb-4 rounded border border-secondary bg-light">
+        <div>
+            <i>Sponsored content</i>
+            <img class="mr-3" src="https://m.media-amazon.com/images/I/41OonY0kRWL._SX399_BO1,204,203,200_.jpg"
+                width='80%' height='auto' alt="">
+            <h5 class="mt-0">
+                <a href="https://amzn.to/3JmzEFq" target="_blank">
+                    <span class="text-dark">Storytelling with Data: A Data Visualization Guide for
+                        Business</span>
+                </a>
+            </h5>
+            Don't simply show your data - tell a story with it! Storytelling with Data teaches you
+            the fundamentals of data visualization and how to communicate effectively with data. I
+            use this book in the series of articles '12 Essential Visualizations and How to
+            Implement them.
+
+        </div>
+    </div>
+
+    <!-- google add start-->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3208991186670959"
+        crossorigin="anonymous"></script>
+    <!-- sfs vertical -->
+    <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3208991186670959" data-ad-slot="6617299104"
+        data-ad-format="auto" data-full-width-responsive="true"></ins>
+    <script>
+        (adsbygoogle = window.adsbygoogle || []).push({});
+    </script>
+    <!-- google add end-->
+
+    <!-- How charts lie -->
+    <div class="p-4 shadow-sm mb-4 rounded border border-secondary bg-light">
+        <div>
+            <i>Sponsored content</i>
+            <img class="mr-3" src="https://m.media-amazon.com/images/I/41N21MzfCRL._SX329_BO1,204,203,200_.jpg"
+                width='80%' height='auto' alt="">
+            <h5 class="mt-0">
+                <a href="https://amzn.to/3ZuQO9B" target="_blank">
+                    <span class="text-dark">How Charts Lie: Getting Smarter about Visual
+                        Information</span>
+                </a>
+            </h5>
+            A leading data visualization expert explores the negative - and positive - influences
+            that charts have on our perception of truth. I used this book as the inspiration for
+            'How Not to Lie with Charts'.
+
+        </div>
+    </div>
+
+
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3208991186670959"
+        crossorigin="anonymous"></script>
+    <!-- sfs vertical -->
+    <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3208991186670959" data-ad-slot="6617299104"
+        data-ad-format="auto" data-full-width-responsive="true"></ins>
+    <script>
+        (adsbygoogle = window.adsbygoogle || []).push({});
+    </script>
+
+    <div id="amzn-assoc-ad-d5bf4dcd-55c6-4038-a3d8-ff8bfa49de8a"></div>
+    <script async
+        src="//z-na.amazon-adsystem.com/widgets/onejs?MarketPlace=US&adInstanceId=d5bf4dcd-55c6-4038-a3d8-ff8bfa49de8a"></script>
+
+</div>
+
+  </div><a class="u-url" href="/2024/09/28/AI_Agents_vs._AI_Pipelines-3A_a_Practical_Guide_to_Coding_Your_LLM_Application.html" hidden></a>
+</article>
+      </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-kenU1KFdBIe4zVF0s0G1M5b4hcpxyD9F7jL+jjXkk+Q2h455rYXK/7HAuoJl+0I4" crossorigin="anonymous"></script>
+
+  </body>
+
+</html>
